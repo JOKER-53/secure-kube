@@ -1,0 +1,36 @@
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# kubeconfig / kind
+kubeconfig*
+*.kubeconfig
+.kube/
+
+# Helm
+**/charts/*.tgz
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Local secrets / overrides
+.env
+.env.local
+config.local.env
+
+# Logs
+*.log
+/tmp/

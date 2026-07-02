@@ -1,0 +1,33 @@
+# Helm values for open-policy-agent/gatekeeper
+replicas: 3
+
+auditInterval: 60          # re-scan existing resources every 60s
+constraintViolationsLimit: 100
+auditFromCache: false      # audit against live cluster state, not just cache
+
+# CIS 5.2.x — Gatekeeper's own pods must also run hardened.
+controllerManager:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+audit:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Fail closed: if the webhook is unreachable, deny the request rather
+# than silently letting it through.
+emitAdmissionEvents: true
+disableValidatingWebhook: false
+validatingWebhookFailurePolicy: Fail
+
+logLevel: INFO

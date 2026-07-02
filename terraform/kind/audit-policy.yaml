@@ -1,0 +1,16 @@
+# CIS Kubernetes Benchmark 3.2.x — minimal audit policy
+# Logs request metadata for everything, full request/response body
+# for secrets/configmaps/RBAC changes (high-value security events).
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  - level: RequestResponse
+    resources:
+      - group: ""
+        resources: ["secrets", "configmaps"]
+      - group: "rbac.authorization.k8s.io"
+        resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+
+  - level: Metadata
+    omitStages:
+      - "RequestReceived"

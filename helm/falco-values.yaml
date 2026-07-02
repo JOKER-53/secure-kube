@@ -1,0 +1,29 @@
+# Helm values for falcosecurity/falco
+# NSA/CISA Hardening Guide §4 — runtime threat detection.
+driver:
+  kind: ebpf   # no kernel module compilation needed, works well in kind
+
+falcosidekick:
+  enabled: true
+  webui:
+    enabled: true   # simple dashboard to see alerts without a SIEM
+
+falco:
+  jsonOutput: true
+  jsonIncludeOutputProperty: true
+
+  # Rules that matter most for a "secure by default" cluster demo:
+  # shell-in-container, unexpected outbound connections, sensitive
+  # file reads (matches the audit-logging objective).
+  rules_file:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/k8s_audit_rules.yaml
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1024Mi

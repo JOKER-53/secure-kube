@@ -1,0 +1,60 @@
+# CIS 5.1.x — Minimize wildcard use, minimize access to secrets,
+# minimize cluster-admin bindings.
+
+# A namespaced role that workloads can actually be bound to.
+# Explicit verbs/resources only — no "*" anywhere.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: workload-runtime
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  # Note: intentionally NO access to "secrets" from this role.
+  # Workloads needing secrets get a separate, tightly-scoped role
+  # naming the exact secret via resourceNames.
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: workload-sa
+  namespace: default
+automountServiceAccountToken: false   # CIS 5.1.6 — don't auto-mount unless required
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: workload-runtime-binding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: workload-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: workload-runtime
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# CIS 5.1.1 — audit cluster-admin bindings. This ClusterRoleBinding
+# is scoped to human operators only (a real group from your IdP),
+# never to a workload ServiceAccount.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: platform-admins
+subjects:
+  - kind: Group
+    name: "platform-admins"     # replace with your IdP group
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io

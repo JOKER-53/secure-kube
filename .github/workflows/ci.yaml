@@ -1,0 +1,63 @@
+name: SecureKube CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Terraform fmt check
+        run: terraform -chdir=terraform/kind fmt -check -recursive
+
+      - name: Terraform validate
+        run: |
+          terraform -chdir=terraform/kind init -backend=false
+          terraform -chdir=terraform/kind validate
+
+      - name: Kustomize build (syntax check)
+        run: kubectl kustomize kustomize/base > /dev/null
+
+      - name: Deploy cluster
+        run: make cluster
+
+      - name: Apply policy layer
+        run: make policies
+
+      - name: Install Gatekeeper + constraints
+        run: make gatekeeper
+
+      - name: Install Falco
+        run: make falco
+
+      - name: Verify policies are enforced
+        run: make verify
+
+      - name: Run CIS Benchmark (kube-bench)
+        run: make bench
+
+      - name: Tear down
+        if: always()
+        run: make destroy

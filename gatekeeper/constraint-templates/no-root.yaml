@@ -1,0 +1,28 @@
+# NIST SP 800-190 §4.4.3 / K8s Pod Security Standards (Restricted) —
+# containers must not run as root.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequirenonroot
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequireNonRoot
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequirenonroot
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          not c.securityContext.runAsNonRoot == true
+          msg := sprintf("container <%v> must set securityContext.runAsNonRoot = true", [c.name])
+        }
+
+        input_containers[c] {
+          c := input.review.object.spec.containers[_]
+        }
+        input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+        }

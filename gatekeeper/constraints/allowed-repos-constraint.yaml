@@ -1,0 +1,20 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sAllowedRepos
+metadata:
+  name: allowed-repos
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    excludedNamespaces: ["kube-system", "gatekeeper-system", "falco", "calico-system"]
+  parameters:
+    # Adjust to your org's real registries. docker.io/library is here
+    # only so the bundled examples/ workloads work out of the box —
+    # replace with your private registry for production use.
+    repos:
+      - "docker.io/library/"
+      - "ghcr.io/"
+      - "gcr.io/"
+      - "registry.k8s.io/"
+  enforcementAction: deny

@@ -5,10 +5,10 @@ export
         status logs clean-logs dashboard clean help
 
 CLUSTER_NAME  ?= securekube
-TF_VAR_cluster_name         = $(CLUSTER_NAME)
-TF_VAR_worker_count         = $(WORKER_COUNT)
-TF_VAR_control_plane_count  = $(CONTROL_PLANE_COUNT)
-TF_VAR_enable_network_policy_cni = $(ENABLE_CALICO)
+TF_VAR_cluster_name         = $(strip $(CLUSTER_NAME))
+TF_VAR_worker_count         = $(strip $(WORKER_COUNT))
+TF_VAR_control_plane_count  = $(strip $(CONTROL_PLANE_COUNT))
+TF_VAR_enable_network_policy_cni = $(strip $(ENABLE_CALICO))
 export TF_VAR_cluster_name TF_VAR_worker_count TF_VAR_control_plane_count TF_VAR_enable_network_policy_cni
 
 help: ## Show this help
@@ -48,7 +48,7 @@ gatekeeper: ## Step 4: Install OPA Gatekeeper + all constraint templates + const
 	@echo "→ Gatekeeper installed — 6 constraints enforced: no-root, no-privileged, readonly-rootfs, no-hostpath, no-host-namespaces, require-resources, allowed-repos, capabilities-and-ports"
 
 falco: ## Step 5: Install Falco for runtime threat detection + audit logging
-ifeq ($(ENABLE_FALCO),true)
+ifeq ($(strip $(ENABLE_FALCO)),true)
 	helm repo add falcosecurity https://falcosecurity.github.io/charts --force-update
 	helm repo update
 	helm upgrade --install falco falcosecurity/falco \

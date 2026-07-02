@@ -52,8 +52,8 @@ jobs:
       - name: Install Falco
         run: make falco
 
-      - name: Verify policies are enforced
-        run: make verify
+      - name: Test policies (negative + positive)
+        run: make test
 
       - name: Run CIS Benchmark (kube-bench)
         run: make bench

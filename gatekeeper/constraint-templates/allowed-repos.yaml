@@ -1,0 +1,42 @@
+# NSA/CISA Hardening Guide §5 — supply-chain control: only pull from
+# registries you trust. Parameterized so each cluster can set its own
+# allow-list without touching the Rego.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sallowedrepos
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sAllowedRepos
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            repos:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sallowedrepos
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          not allowed(c.image)
+          msg := sprintf("container <%v> uses image <%v> from a registry that is not in the allow-list", [c.name, c.image])
+        }
+
+        allowed(image) {
+          repo := input.parameters.repos[_]
+          startswith(image, repo)
+        }
+
+        input_containers[c] {
+          c := input.review.object.spec.containers[_]
+        }
+        input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+        }

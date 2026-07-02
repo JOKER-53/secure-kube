@@ -1,0 +1,31 @@
+# CIS 5.2.4-5.2.6 — host namespace sharing breaks pod isolation
+# entirely: hostNetwork exposes node interfaces, hostPID/hostIPC let
+# a pod see and signal every process on the node.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sblockhostnamespaces
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sBlockHostNamespaces
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sblockhostnamespaces
+
+        violation[{"msg": msg}] {
+          input.review.object.spec.hostNetwork == true
+          msg := "hostNetwork is not allowed"
+        }
+
+        violation[{"msg": msg}] {
+          input.review.object.spec.hostPID == true
+          msg := "hostPID is not allowed"
+        }
+
+        violation[{"msg": msg}] {
+          input.review.object.spec.hostIPC == true
+          msg := "hostIPC is not allowed"
+        }

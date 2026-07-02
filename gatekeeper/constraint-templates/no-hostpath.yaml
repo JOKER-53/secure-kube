@@ -1,0 +1,21 @@
+# CIS 5.2.10 / NSA-CISA §3.1 — hostPath volumes let a pod read/write
+# the node's filesystem, which is a container-escape shortcut.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sblockhostpath
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sBlockHostPath
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sblockhostpath
+
+        violation[{"msg": msg}] {
+          v := input.review.object.spec.volumes[_]
+          v.hostPath
+          msg := sprintf("volume <%v> uses hostPath, which is not allowed", [v.name])
+        }

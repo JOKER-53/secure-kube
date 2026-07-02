@@ -1,0 +1,59 @@
+# Pod Security Standards (Restricted) — containers must drop ALL
+# capabilities by default and may only add back a small safe set.
+# Also blocks privileged host ports (<1024) which usually indicate
+# a container trying to bind like a root process on the node.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8scapabilitiesandports
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sCapabilitiesAndPorts
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            allowedCapabilities:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8scapabilitiesandports
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          not drops_all(c)
+          msg := sprintf("container <%v> must drop ALL capabilities in securityContext.capabilities.drop", [c.name])
+        }
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          added := c.securityContext.capabilities.add[_]
+          not added_is_allowed(added)
+          msg := sprintf("container <%v> adds capability <%v>, which is not in the allow-list", [c.name, added])
+        }
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          p := c.ports[_]
+          p.containerPort < 1024
+          msg := sprintf("container <%v> exposes privileged port <%v> (<1024)", [c.name, p.containerPort])
+        }
+
+        drops_all(c) {
+          d := c.securityContext.capabilities.drop[_]
+          d == "ALL"
+        }
+
+        added_is_allowed(cap) {
+          allowed := input.parameters.allowedCapabilities[_]
+          allowed == cap
+        }
+
+        input_containers[c] {
+          c := input.review.object.spec.containers[_]
+        }

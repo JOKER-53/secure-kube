@@ -19,6 +19,21 @@ Kubernetes ships no default namespaced role suitable for application workloads �
 
 `helm/gatekeeper-values.yaml` sets `validatingWebhookFailurePolicy: Fail`. If the Gatekeeper webhook is ever unreachable, the API server rejects the request rather than admitting it unchecked. This trades a small availability risk (a webhook outage blocks new pod creation) for a much larger security guarantee (policy can never be silently bypassed).
 
+## Why the Gatekeeper layer has 8 constraints, not 3
+
+The first pass only blocked root/privileged/writable-rootfs — a real attacker doesn't need any of those if `hostPath` mounting `/` is left open, or if a pod can set `hostNetwork: true` and see every other pod's traffic on the node. The current set closes the highest-value gaps beyond what PSA's "restricted" profile alone covers:
+
+| Constraint | What it stops |
+|---|---|
+| `no-root` / `no-privileged` / `readonly-rootfs` | container escape via root or writable host-equivalent access |
+| `no-hostpath` | reading/writing the node filesystem directly |
+| `no-host-namespaces` | seeing/signaling every process on the node, or sniffing node network traffic |
+| `require-resources` | noisy-neighbor DoS from unbounded pods |
+| `allowed-repos` | pulling arbitrary/untrusted images |
+| `capabilities-and-ports` | capability creep and binding privileged ports like a root process |
+
+This still isn't exhaustive — seccomp/AppArmor profile enforcement, image signature verification (Cosign), and NetworkPolicy egress allow-lists per-workload are reasonable next additions, not yet implemented.
+
 ## Audit logging scope
 
 `terraform/kind/audit-policy.yaml` logs full request/response bodies only for `secrets`, `configmaps`, and RBAC objects — the resources where a full body matters for a security investigation — and only request metadata for everything else, to keep log volume manageable while still satisfying CIS 3.2.x.

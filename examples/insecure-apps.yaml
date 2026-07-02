@@ -1,0 +1,103 @@
+# Each pod below violates exactly ONE policy, so you can see precisely
+# which layer blocks which pattern. None of these should ever run —
+# `kubectl apply -f examples/insecure-apps.yaml` should fail entirely.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-privileged
+  namespace: default
+spec:
+  containers:
+    - name: app
+      image: docker.io/library/nginx:1.27-alpine
+      securityContext:
+        privileged: true
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-root
+  namespace: default
+spec:
+  containers:
+    - name: app
+      image: docker.io/library/nginx:1.27-alpine
+      securityContext:
+        runAsNonRoot: false
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-writable-rootfs
+  namespace: default
+spec:
+  containers:
+    - name: app
+      image: docker.io/library/nginx:1.27-alpine
+      securityContext:
+        runAsNonRoot: true
+        readOnlyRootFilesystem: false
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-hostpath
+  namespace: default
+spec:
+  containers:
+    - name: app
+      image: docker.io/library/nginx:1.27-alpine
+      volumeMounts:
+        - name: host-root
+          mountPath: /host
+  volumes:
+    - name: host-root
+      hostPath:
+        path: /
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-hostnetwork
+  namespace: default
+spec:
+  hostNetwork: true
+  containers:
+    - name: app
+      image: docker.io/library/nginx:1.27-alpine
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-no-resources
+  namespace: default
+spec:
+  containers:
+    - name: app
+      image: docker.io/library/nginx:1.27-alpine
+      # no resources.requests / resources.limits at all
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-untrusted-registry
+  namespace: default
+spec:
+  containers:
+    - name: app
+      image: some-random-registry.example.com/definitely-not-approved:latest
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-privileged-port
+  namespace: default
+spec:
+  containers:
+    - name: app
+      image: docker.io/library/nginx:1.27-alpine
+      ports:
+        - containerPort: 80   # < 1024
+      securityContext:
+        capabilities:
+          drop: ["ALL"]

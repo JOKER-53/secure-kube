@@ -1,0 +1,47 @@
+# This pod is deliberately built to satisfy every layer:
+# PSA restricted, and all 6 Gatekeeper constraints. Deploy it to prove
+# the policy stack allows legitimate, well-formed workloads through —
+# not just that it blocks bad ones.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-app
+  namespace: default
+  labels:
+    app: secure-app
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - name: app
+      image: docker.io/library/nginx:1.27-alpine
+      ports:
+        - containerPort: 8080   # >= 1024, avoids the privileged-port rule
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
+        privileged: false
+        capabilities:
+          drop: ["ALL"]
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /var/cache/nginx
+        - name: run
+          mountPath: /var/run
+  volumes:
+    - name: tmp
+      emptyDir: {}
+    - name: cache
+      emptyDir: {}
+    - name: run
+      emptyDir: {}

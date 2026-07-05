@@ -2,6 +2,8 @@
 
 
 ![CI](https://github.com/KADHIRAVANEG/secure-kube/actions/workflows/ci.yaml/badge.svg)
+
+
 A CIS-aligned, zero-trust Kubernetes cluster provisioned via IaC — no manual security configuration required, 100% local, zero cloud cost.
 
 ## Problem statement

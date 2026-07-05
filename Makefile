@@ -63,10 +63,11 @@ test: ## Run negative + positive policy tests (replaces old 'verify')
 verify: test ## Alias for 'test' (back-compat)
 
 bench: ## Step 6: Run kube-bench and report the CIS score
-	kubectl apply -f https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml
+	kubectl delete job kube-bench -n kube-system --ignore-not-found
+	kubectl apply -n kube-system -f https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml
 	@echo "→ Waiting for kube-bench job to complete..."
-	kubectl wait --for=condition=complete --timeout=60s job/kube-bench
-	kubectl logs job/kube-bench
+	kubectl wait --for=condition=complete --timeout=120s job/kube-bench -n kube-system
+	kubectl logs -n kube-system job/kube-bench
 	@echo ""
 	@echo "ℹ️  kind runs a subset of a real control plane (no managed etcd/kubelet file perms"
 	@echo "   the way a bare-metal install has). Expect PASS on API-server/RBAC/PSP-family"
@@ -92,7 +93,7 @@ logs: ## Tail Falco alert logs
 	kubectl logs -n falco -l app.kubernetes.io/name=falco -f --tail=50
 
 clean-logs: ## Clear old kube-bench / test job leftovers
-	kubectl delete job kube-bench --ignore-not-found
+	kubectl delete job kube-bench -n kube-system --ignore-not-found
 	kubectl delete pod -n default -l app=secure-app --ignore-not-found
 	@echo "→ Stale jobs and test pods removed"
 

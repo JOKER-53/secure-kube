@@ -119,6 +119,54 @@ securekube/
 └── docs/architecture.md             the real reasoning behind every non-obvious decision
 ```
 
+## Chart
+
+```mermaid
+flowchart TD
+    %% Styling Definitions
+    classDef infra fill:#2980b9,stroke:#fff,color:#fff;
+    classDef policy fill:#e67e22,stroke:#fff,color:#fff;
+    classDef deploy fill:#27ae60,stroke:#fff,color:#fff;
+    classDef validation fill:#8e44ad,stroke:#fff,color:#fff;
+
+    %% Orchestration
+    MK[Makefile]:::deploy
+    CI[.github/workflows/ci.yaml]:::validation
+
+    %% Layer 1: Infrastructure
+    subgraph Provisioning [Layer 1: Infrastructure & Hardening]
+        TF[terraform/kind/]:::infra
+        TF --> Audit[audit-policy.yaml]
+        TF --> KConfig[kind-config.yaml]
+    end
+
+    %% Layer 2: Security Policy
+    subgraph Enforcement [Layer 2: Policy Enforcement]
+        GK[gatekeeper/]:::policy
+        GK --> Temp[ConstraintTemplates]
+        GK --> Cons[Constraints]
+        Kus[kustomize/base/]:::policy
+        Kus --> Net[NetworkPolicies]
+        Kus --> RBAC[Least Privilege RBAC]
+        Kus --> PSA[Pod Security Admission]
+    end
+
+    %% Layer 3: Runtime & Validation
+    subgraph Validation [Layer 3: Runtime & Validation]
+        Helm[helm/]:::deploy
+        Helm --> Falco[Falco eBPF]
+        Scripts[scripts/test-policies.sh]:::validation
+        Ex[examples/]:::validation
+    end
+
+    %% Connections
+    MK -->|deploy| TF
+    TF -->|initialize| Enforcement
+    Enforcement -->|runtime| Helm
+    CI -->|validates| Scripts
+    Scripts -->|tests| Ex
+```
+
 ## Known limitations (read this before treating it as "done")
 
 - **`make bench` will not show a clean pass.** `kind` runs Kubernetes components as containers on your machine, not as a real multi-node control plane — controls around etcd file permissions, kubelet config file ownership, and certain node-level TLS settings can't be satisfied the way they would be on bare metal or a managed node group.

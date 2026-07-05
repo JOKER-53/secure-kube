@@ -15,6 +15,9 @@ override.tf.json
 kubeconfig*
 *.kubeconfig
 .kube/
+terraform/kind/*-config
+terraform/kind/*-config.yaml
+!terraform/kind/kind-config.yaml
 
 # Helm
 **/charts/*.tgz

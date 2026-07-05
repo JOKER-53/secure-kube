@@ -1,0 +1,55 @@
+# Consumed directly by `kind create cluster --config kind-config.yaml`
+# (see main.tf). Kept as a static file rather than templated per
+# control-plane/worker count for reliability — the tehcyx/kind
+# Terraform provider's dynamic node blocks with kubeadmConfigPatches
+# were unreliable for multi-node joins. Edit node counts here directly
+# if you need more than 1 control-plane + 2 workers.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+# CIS 5.3.2 — disable the default CNI (kindnet doesn't enforce
+# NetworkPolicy) so Calico can be installed instead.
+networking:
+  disableDefaultCNI: true
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/12"
+
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: ClusterConfiguration
+        apiServer:
+          extraArgs:
+            audit-log-path: /var/log/kubernetes/audit.log
+            audit-log-maxage: "30"
+            audit-log-maxbackup: "10"
+            audit-log-maxsize: "100"
+            audit-policy-file: /etc/kubernetes/audit-policy.yaml
+            profiling: "false"
+            enable-admission-plugins: NodeRestriction,PodSecurity
+          extraVolumes:
+            - name: audit-policy
+              hostPath: /etc/kubernetes/audit-policy.yaml
+              mountPath: /etc/kubernetes/audit-policy.yaml
+              readOnly: true
+              pathType: File
+            - name: audit-logs
+              hostPath: /var/log/kubernetes
+              mountPath: /var/log/kubernetes
+              readOnly: false
+              pathType: DirectoryOrCreate
+        controllerManager:
+          extraArgs:
+            profiling: "false"
+            terminated-pod-gc-threshold: "50"
+        scheduler:
+          extraArgs:
+            profiling: "false"
+    extraMounts:
+      - hostPath: ./audit-policy.yaml
+        containerPath: /etc/kubernetes/audit-policy.yaml
+        readOnly: true
+
+  - role: worker
+  - role: worker

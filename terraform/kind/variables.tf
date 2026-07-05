@@ -4,20 +4,8 @@ variable "cluster_name" {
   default     = "securekube"
 }
 
-variable "control_plane_count" {
-  description = "Number of control-plane nodes"
-  type        = number
-  default     = 1
-}
-
-variable "worker_count" {
-  description = "Number of worker nodes"
-  type        = number
-  default     = 2
-}
-
 variable "enable_network_policy_cni" {
-  description = "Disable kindnet and install Calico so NetworkPolicy (default-deny) is actually enforced"
+  description = "Install Calico so NetworkPolicy (default-deny) is actually enforced. kind-config.yaml already disables the default CNI to match; toggling this only controls whether Calico gets installed."
   type        = bool
   default     = true
 }

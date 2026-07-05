@@ -1,4 +1,4 @@
-k# NIST SP 800-190 §4.4.3 / K8s Pod Security Standards (Restricted) —
+# NIST SP 800-190 4.4.3 / K8s Pod Security Standards (Restricted) --
 # containers must not run as root.
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate

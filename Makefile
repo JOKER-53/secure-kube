@@ -6,10 +6,7 @@ export
 
 CLUSTER_NAME  ?= securekube
 TF_VAR_cluster_name         = $(strip $(CLUSTER_NAME))
-TF_VAR_worker_count         = $(strip $(WORKER_COUNT))
-TF_VAR_control_plane_count  = $(strip $(CONTROL_PLANE_COUNT))
 TF_VAR_enable_network_policy_cni = $(strip $(ENABLE_CALICO))
-export TF_VAR_cluster_name TF_VAR_worker_count TF_VAR_control_plane_count TF_VAR_enable_network_policy_cni
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -39,6 +36,7 @@ gatekeeper: ## Step 4: Install OPA Gatekeeper + all constraint templates + const
 	helm repo update
 	helm upgrade --install gatekeeper gatekeeper/gatekeeper \
 		--namespace gatekeeper-system --create-namespace \
+		--wait --timeout 180s \
 		-f helm/gatekeeper-values.yaml
 	kubectl wait --for=condition=Available --timeout=120s -n gatekeeper-system deployment/gatekeeper-controller-manager
 	kubectl apply -f gatekeeper/constraint-templates/

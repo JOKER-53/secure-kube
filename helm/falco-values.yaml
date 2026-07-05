@@ -1,7 +1,7 @@
 # Helm values for falcosecurity/falco
 # NSA/CISA Hardening Guide §4 — runtime threat detection.
 driver:
-  kind: ebpf   # no kernel module compilation needed, works well in kind
+  kind: modern_ebpf   # no kernel module compilation needed, works well in kind
 
 falcosidekick:
   enabled: true

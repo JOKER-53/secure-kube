@@ -1,15 +1,9 @@
-output "kubeconfig_path" {
-  description = "Path to the generated kubeconfig for this cluster"
-  value       = kind_cluster.securekube.kubeconfig_path
-}
-
 output "cluster_name" {
   description = "Name of the provisioned kind cluster"
-  value       = kind_cluster.securekube.name
+  value       = var.cluster_name
 }
 
-output "endpoint" {
-  description = "API server endpoint"
-  value       = kind_cluster.securekube.endpoint
-  sensitive   = true
+output "kubectl_context" {
+  description = "kubectl context to use for this cluster (kind auto-registers this in ~/.kube/config)"
+  value       = "kind-${var.cluster_name}"
 }

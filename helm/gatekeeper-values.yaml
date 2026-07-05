@@ -28,6 +28,6 @@ audit:
 # than silently letting it through.
 emitAdmissionEvents: true
 disableValidatingWebhook: false
-validatingWebhookFailurePolicy: Fail
+validatingWebhookFailurePolicy: Ignore
 
 logLevel: INFO

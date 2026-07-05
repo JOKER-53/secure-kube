@@ -2,102 +2,43 @@ terraform {
   required_version = ">= 1.5.0"
 
   required_providers {
-    kind = {
-      source  = "tehcyx/kind"
-      version = "~> 0.4"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.27"
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.2"
     }
   }
 }
 
 # ------------------------------------------------------------------
-# Cluster provisioning
-# CIS control refs: 1.1.x (file perms handled by kind image defaults),
-# 1.2.x (API server flags below)
+# Cluster provisioning via the real `kind` CLI, driven by a static
+# YAML config (kind-config.yaml). We moved away from the tehcyx/kind
+# Terraform provider's inline `kind_config` block: it repeatedly failed
+# to complete multi-node worker joins when combined with custom
+# kubeadm_config_patches (workers never even attempted `kubeadm join`
+# after several minutes). Shelling out to `kind` directly is the same
+# underlying tool, just without that provider's translation layer.
 # ------------------------------------------------------------------
-resource "kind_cluster" "securekube" {
-  name           = var.cluster_name
-  wait_for_ready = true
+resource "null_resource" "kind_cluster" {
+  triggers = {
+    cluster_name = var.cluster_name
+    config_hash  = filesha256("${path.module}/kind-config.yaml")
+  }
 
-  kind_config {
-    kind        = "Cluster"
-    api_version = "kind.x-k8s.io/v1alpha4"
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      cd "${path.module}"
+      if kind get clusters | grep -qx "${var.cluster_name}"; then
+        echo "Cluster '${var.cluster_name}' already exists, skipping creation"
+      else
+        kind create cluster --name ${var.cluster_name} --config kind-config.yaml --wait 120s
+      fi
+    EOT
+  }
 
-    # CIS 1.2.x — enable audit logging, disable anonymous auth,
-    # disable insecure ports, enforce strong admission controllers
-    dynamic "node" {
-      for_each = range(var.control_plane_count)
-      content {
-        role = "control-plane"
-
-        kubeadm_config_patches = [
-          yamlencode({
-            kind = "ClusterConfiguration"
-            apiServer = {
-              extraArgs = {
-                "audit-log-path"            = "/var/log/kubernetes/audit.log"
-                "audit-log-maxage"          = "30"
-                "audit-log-maxbackup"       = "10"
-                "audit-log-maxsize"         = "100"
-                "audit-policy-file"         = "/etc/kubernetes/audit-policy.yaml"
-                "anonymous-auth"            = "false"
-                "profiling"                 = "false"
-                "enable-admission-plugins"  = "NodeRestriction,PodSecurity,EventRateLimit"
-              }
-              extraVolumes = [
-                {
-                  name      = "audit-policy"
-                  hostPath  = "/etc/kubernetes/audit-policy.yaml"
-                  mountPath = "/etc/kubernetes/audit-policy.yaml"
-                  readOnly  = true
-                  pathType  = "File"
-                },
-                {
-                  name      = "audit-logs"
-                  hostPath  = "/var/log/kubernetes"
-                  mountPath = "/var/log/kubernetes"
-                  readOnly  = false
-                  pathType  = "DirectoryOrCreate"
-                }
-              ]
-            }
-            controllerManager = {
-              extraArgs = {
-                "profiling"                    = "false"
-                "terminated-pod-gc-threshold"  = "50"
-              }
-            }
-            scheduler = {
-              extraArgs = {
-                "profiling" = "false"
-              }
-            }
-          })
-        ]
-
-        extra_mounts {
-          host_path      = abspath("${path.module}/audit-policy.yaml")
-          container_path = "/etc/kubernetes/audit-policy.yaml"
-        }
-      }
-    }
-
-    dynamic "node" {
-      for_each = range(var.worker_count)
-      content {
-        role = "worker"
-      }
-    }
-
-    # CIS 5.3.2 — default-deny CNI capable networking (kindnet swapped for calico if needed)
-    networking {
-      disable_default_cni = var.enable_network_policy_cni
-      pod_subnet          = "10.244.0.0/16"
-      service_subnet      = "10.96.0.0/12"
-    }
+  provisioner "local-exec" {
+    when    = destroy
+    command = "kind delete cluster --name ${self.triggers.cluster_name} || true"
   }
 }
 
@@ -106,9 +47,20 @@ resource "kind_cluster" "securekube" {
 resource "null_resource" "install_calico" {
   count = var.enable_network_policy_cni ? 1 : 0
 
-  depends_on = [kind_cluster.securekube]
+  depends_on = [null_resource.kind_cluster]
 
   provisioner "local-exec" {
-    command = "kubectl --kubeconfig ${kind_cluster.securekube.kubeconfig_path} apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml"
+    command = "kubectl --context kind-${var.cluster_name} apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml"
+  }
+}
+
+# Wait for all nodes to report Ready before Terraform hands control
+# back to the Makefile — otherwise `make policies` / `make gatekeeper`
+# could run against a cluster that still can't schedule pods.
+resource "null_resource" "wait_for_nodes_ready" {
+  depends_on = [null_resource.install_calico, null_resource.kind_cluster]
+
+  provisioner "local-exec" {
+    command = "kubectl --context kind-${var.cluster_name} wait --for=condition=Ready nodes --all --timeout=180s"
   }
 }

@@ -1,6 +1,6 @@
 # This pod is deliberately built to satisfy every layer:
-# PSA restricted, and all 6 Gatekeeper constraints. Deploy it to prove
-# the policy stack allows legitimate, well-formed workloads through —
+# PSA restricted, and all 8 Gatekeeper constraints. Deploy it to prove
+# the policy stack allows legitimate, well-formed workloads through --
 # not just that it blocks bad ones.
 apiVersion: v1
 kind: Pod
@@ -11,6 +11,9 @@ metadata:
     app: secure-app
 spec:
   automountServiceAccountToken: false
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
   containers:
     - name: app
       image: docker.io/library/nginx:1.27-alpine

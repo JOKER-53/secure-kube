@@ -13,7 +13,7 @@
 **Do not open a public GitHub issue for security vulnerabilities.**
 
 Report privately via GitHub's built-in security advisory:
-1. Go to `https://github.com/KADHIRAVANEG/secure-kube/security/advisories`
+1. Go to `https://github.com/JOKER-53/secure-kube/security/advisories`
 2. Click **New draft security advisory**
 3. Fill in the details and submit
 
@@ -23,7 +23,7 @@ We will respond within 72 hours and aim to release a fix within 14 days for conf
 
 This project is a **local development / reference implementation**. Please report:
 
-- Vulnerabilities in the container image (`ghcr.io/kadhiravaneg/secure-kube`)
+- Vulnerabilities in the container image (`ghcr.io/joker-53/secure-kube`)
 - Gatekeeper constraints that can be bypassed in ways not already documented
 - CI/CD workflow vulnerabilities (secret exposure, injection attacks)
 - Incorrect security documentation that could mislead users into unsafe configurations

@@ -46,7 +46,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Docker images
 ```
-docker pull ghcr.io/kadhiravaneg/secure-kube:v1.2.0
+docker pull ghcr.io/joker-53/secure-kube:v1.2.0
 docker pull joker53/secure-kube:v1.2.0
 ```
 
@@ -103,7 +103,7 @@ docker pull joker53/secure-kube:v1.2.0
 
 ### Docker images
 ```
-docker pull ghcr.io/kadhiravaneg/secure-kube:v1.2.0
+docker pull ghcr.io/joker-53/secure-kube:v1.2.0
 docker pull joker53/secure-kube:v1.2.0
 ```
 

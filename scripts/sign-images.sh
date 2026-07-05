@@ -9,9 +9,9 @@
 #
 # Verify any image with:
 #   cosign verify \
-#     --certificate-identity-regexp="https://github.com/KADHIRAVANEG/secure-kube/.*" \
+#     --certificate-identity-regexp="https://github.com/JOKER-53/secure-kube/.*" \
 #     --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-#     ghcr.io/kadhiravaneg/secure-kube:v1.4.0
+#     ghcr.io/joker-53/secure-kube:v1.4.0
 set -euo pipefail
 
 OWNER_LC=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
@@ -28,6 +28,6 @@ cosign sign --yes "${DOCKERHUB_IMAGE}"
 
 echo "✅ Images signed. Verify with:"
 echo "   cosign verify \\"
-echo "     --certificate-identity-regexp='https://github.com/KADHIRAVANEG/secure-kube/.*' \\"
+echo "     --certificate-identity-regexp='https://github.com/JOKER-53/secure-kube/.*' \\"
 echo "     --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \\"
 echo "     ${GHCR_IMAGE}"

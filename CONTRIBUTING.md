@@ -61,7 +61,7 @@ Or use the container image — no local installs needed:
 docker run --rm -it \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $(pwd):/workspace -w /workspace \
-  ghcr.io/kadhiravaneg/secure-kube:latest bash
+  ghcr.io/joker-53/secure-kube:latest bash
 ```
 
 ### Fork and clone
@@ -69,7 +69,7 @@ docker run --rm -it \
 ```bash
 git clone https://github.com/<your-username>/secure-kube
 cd secure-kube
-git remote add upstream https://github.com/KADHIRAVANEG/secure-kube
+git remote add upstream https://github.com/JOKER-53/secure-kube
 ```
 
 ### Deploy locally

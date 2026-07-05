@@ -46,6 +46,12 @@ The first pass only blocked root/privileged/writable-rootfs — a real attacker 
 
 This still isn't exhaustive — seccomp/AppArmor profile enforcement, image signature verification (Cosign), and NetworkPolicy egress allow-lists per-workload are reasonable next additions, not yet implemented.
 
+## Why `kube-bench` runs in `kube-system`, not `default`
+
+The first version of this Makefile applied `kube-bench`'s job manifest without specifying a namespace, so it landed in `default` — which has `pod-security.kubernetes.io/enforce: restricted` from `kustomize/base/pod-security/psa-labels.yaml`. `kube-bench` needs `hostPID: true` and several `hostPath` volume mounts (it inspects node-level config files like `/etc/kubernetes`, `/var/lib/kubelet`, `/var/lib/etcd`) to do its job at all — every one of those is exactly what the `restricted` profile blocks. The result: the `Job` object gets created fine (Jobs aren't subject to Pod Security Admission, only the Pods they spawn are), but every Pod the Job tries to create gets silently rejected, so the Job never has a running Pod and `kubectl wait --for=condition=complete` times out waiting for something that can never happen. Our own hardening was — correctly — blocking the tool whose entire purpose is to check that hardening.
+
+Fix: run `kube-bench` in `kube-system` instead, which we deliberately left unlabeled (no PSA, and already excluded from every Gatekeeper constraint's `excludedNamespaces`) precisely because cluster-level system tooling legitimately needs broader access than application workloads. This is the same reasoning that already applies to Calico and Gatekeeper's own pods — `kube-bench` just needed the same treatment and we'd missed it.
+
 ## Audit logging scope
 
 `terraform/kind/audit-policy.yaml` logs full request/response bodies only for `secrets`, `configmaps`, and RBAC objects — the resources where a full body matters for a security investigation — and only request metadata for everything else, to keep log volume manageable while still satisfying CIS 3.2.x.

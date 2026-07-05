@@ -134,6 +134,7 @@ securekube/
 | `helm install falco` fails with `driver.kind=ebpf ... no longer supported` | Falco chart renamed the value | Already fixed — `helm/falco-values.yaml` uses `modern_ebpf` |
 | `kubectl apply` fails with `invalid object to validate` right after installing a new CRD | Stale local kubectl schema cache | `rm -rf ~/.kube/cache` and retry |
 | `make test` — secure-app gets rejected on `seccompProfile` | Pod Security Standards' `restricted` profile requires `securityContext.seccompProfile.type: RuntimeDefault` | Already set in `examples/secure-app.yaml` |
+| `make bench` hangs, `kubectl wait` times out on `job/kube-bench` | `kube-bench` needs `hostPID`/`hostPath`, which our own restricted PSA on `default` blocks | Already fixed — `make bench` now runs it in `kube-system`, which is intentionally unlabeled for system tooling |
 | Port 2802 already in use (`make dashboard`) | Another process is bound to it | `kubectl port-forward -n falco svc/falco-falcosidekick-ui <free-port>:2802` manually |
 | `make destroy` leaves resources behind | Terraform state drift after manual `kubectl`/`kind` changes | `kind delete cluster --name securekube` as a manual fallback |
 

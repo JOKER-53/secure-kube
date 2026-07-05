@@ -7,6 +7,7 @@ export
 CLUSTER_NAME  ?= securekube
 TF_VAR_cluster_name         = $(strip $(CLUSTER_NAME))
 TF_VAR_enable_network_policy_cni = $(strip $(ENABLE_CALICO))
+export TF_VAR_cluster_name TF_VAR_enable_network_policy_cni
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -68,6 +69,11 @@ bench: ## Step 6: Run kube-bench and report the CIS score
 	@echo "→ Waiting for kube-bench job to complete..."
 	kubectl wait --for=condition=complete --timeout=120s job/kube-bench -n kube-system
 	kubectl logs -n kube-system job/kube-bench
+	@echo ""
+	@echo "ℹ️  kube-bench runs in kube-system, not default: it needs hostPID/hostPath/"
+	@echo "   privileged access to inspect node files, which our own restricted PSA on"
+	@echo "   'default' correctly blocks. kube-system is intentionally left unlabeled"
+	@echo "   for exactly this kind of system tooling — see docs/architecture.md."
 	@echo ""
 	@echo "ℹ️  kind runs a subset of a real control plane (no managed etcd/kubelet file perms"
 	@echo "   the way a bare-metal install has). Expect PASS on API-server/RBAC/PSP-family"

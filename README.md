@@ -1,6 +1,32 @@
 # SecureKube
 
+![CI](https://github.com/KADHIRAVANEG/secure-kube/actions/workflows/ci.yaml/badge.svg)
+![Release](https://github.com/KADHIRAVANEG/secure-kube/actions/workflows/release.yaml/badge.svg)
+![GitHub release](https://img.shields.io/github/v/release/KADHIRAVANEG/secure-kube)
+![License](https://img.shields.io/github/license/KADHIRAVANEG/secure-kube)
+
 A CIS-aligned, zero-trust Kubernetes cluster provisioned via IaC — no manual security configuration required, 100% local, zero cloud cost.
+
+## Container image
+
+No local tool installation required — pull the image and run:
+
+```bash
+docker run --rm -it \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd):/workspace \
+  -w /workspace \
+  ghcr.io/kadhiravaneg/secure-kube:latest \
+  make deploy
+```
+
+Or from Docker Hub:
+
+```bash
+docker pull kadhiravaneg/secure-kube:latest
+```
+
+The image bundles `terraform`, `kubectl`, `helm`, `kind`, and the `argocd` CLI at pinned versions. The Docker socket mount is required because `kind` creates cluster nodes as containers on your host Docker daemon.
 
 ## Problem statement
 

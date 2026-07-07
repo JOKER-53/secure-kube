@@ -1,0 +1,12 @@
+# Don't copy these into the container image
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+**/.git/
+.github/
+*.log
+.DS_Store
+Thumbs.db
+terraform/kind/*-config

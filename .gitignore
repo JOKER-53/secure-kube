@@ -36,6 +36,6 @@ config.local.env
 argocd-password.txt
 argocd-secret*
 
-# Logs
-*.log
-/tmp/
+# Release artifacts
+securekube-v*.zip
+dist/

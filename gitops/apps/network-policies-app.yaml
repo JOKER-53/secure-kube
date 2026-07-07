@@ -1,0 +1,34 @@
+# Argo CD Application — Network Policies
+# Watches kustomize/base/network-policies/ in this repo.
+# Sync is MANUAL: Argo CD will detect drift and show it in the UI,
+# but will not auto-apply. Approve via 'make sync-policies' or the UI.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: securekube-network-policies
+  namespace: argocd
+  # Keep the Application itself when the resource is deleted from git —
+  # prevents accidental deletion of cluster networking on a bad commit.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: securekube
+
+  source:
+    repoURL: https://github.com/PLACEHOLDER/securekube   # replaced by make argocd
+    targetRevision: main
+    path: kustomize/base/network-policies
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+
+  syncPolicy:
+    # Manual: no automated block here. Sync via UI or CLI.
+    syncOptions:
+      - CreateNamespace=false
+      - ApplyOutOfSyncOnly=true
+
+  # Show drift prominently — the whole point of GitOps is knowing when
+  # cluster state has drifted from git.
+  ignoreDifferences: []

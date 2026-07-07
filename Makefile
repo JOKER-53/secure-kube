@@ -1,8 +1,9 @@
 include config.env
 export
 
-.PHONY: deploy deploy-light destroy cluster policies gatekeeper falco verify test bench \
-        status logs clean-logs dashboard clean help
+.PHONY: deploy deploy-light destroy cluster policies gatekeeper falco argocd verify test bench \
+        status logs clean-logs dashboard dashboard-argocd sync-policies sync-rbac \
+        sync-gatekeeper sync-pod-security sync-all clean help
 
 CLUSTER_NAME  ?= securekube
 TF_VAR_cluster_name         = $(strip $(CLUSTER_NAME))
@@ -12,10 +13,11 @@ export TF_VAR_cluster_name TF_VAR_enable_network_policy_cni
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
-deploy: cluster policies gatekeeper falco test ## Full one-command deploy (kind, local)
+deploy: cluster policies gatekeeper falco argocd test ## Full one-command deploy (kind, local)
 	@echo ""
-	@echo "✅ SecureKube is up. CIS-hardened, zero-trust, policy-enforced."
-	@echo "   Run 'make bench' for the CIS score, 'make status' for component health, 'make dashboard' to view alerts."
+	@echo "✅ SecureKube is up. CIS-hardened, zero-trust, policy-enforced, GitOps-managed."
+	@echo "   Run 'make bench' for the CIS score, 'make status' for component health."
+	@echo "   Run 'make dashboard-argocd' to approve pending syncs in the Argo CD UI."
 
 deploy-light: ## Deploy with Falco disabled and 1 worker — for slower machines
 	@$(MAKE) cluster
@@ -58,7 +60,34 @@ else
 	@echo "→ ENABLE_FALCO=false in config.env, skipping Falco install"
 endif
 
-test: ## Run negative + positive policy tests (replaces old 'verify')
+argocd: ## Install Argo CD + register all SecureKube Applications (manual sync mode)
+	./scripts/install-argocd.sh
+
+dashboard-argocd: ## Port-forward the Argo CD UI to localhost:8080
+	@echo "Opening Argo CD UI at http://localhost:8080 (Ctrl+C to stop)"
+	@echo "Username: admin"
+	@echo "Password: $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
+	kubectl port-forward -n argocd svc/argocd-server 8080:80
+
+sync-policies: ## Manually trigger Argo CD sync for network policies
+	kubectl -n argocd patch application securekube-network-policies \
+		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}'
+
+sync-rbac: ## Manually trigger Argo CD sync for RBAC
+	kubectl -n argocd patch application securekube-rbac \
+		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}'
+
+sync-pod-security: ## Manually trigger Argo CD sync for Pod Security Standards
+	kubectl -n argocd patch application securekube-pod-security \
+		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}'
+
+sync-gatekeeper: ## Manually trigger Argo CD sync for Gatekeeper constraints
+	kubectl -n argocd patch application securekube-gatekeeper-templates \
+		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}'
+	kubectl -n argocd patch application securekube-gatekeeper-constraints \
+		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}'
+
+sync-all: sync-policies sync-rbac sync-pod-security sync-gatekeeper ## Trigger Argo CD sync for all layers
 	./scripts/test-policies.sh
 
 verify: test ## Alias for 'test' (back-compat)
@@ -89,6 +118,12 @@ status: ## Show health of every SecureKube component
 	@echo "== Falco =="
 	@kubectl get pods -n falco 2>/dev/null || echo "  not installed"
 	@echo ""
+	@echo "== Argo CD =="
+	@kubectl get pods -n argocd 2>/dev/null || echo "  not installed"
+	@echo ""
+	@echo "== Argo CD Applications =="
+	@kubectl get applications -n argocd 2>/dev/null || echo "  none registered"
+	@echo ""
 	@echo "== Constraints (active policies) =="
 	@kubectl get constraints 2>/dev/null || echo "  none"
 	@echo ""
@@ -112,3 +147,8 @@ destroy: ## Tear down the cluster and all resources
 	@echo "→ Cluster destroyed"
 
 clean: destroy ## Alias for destroy
+
+test: ## Run negative + positive policy tests
+	./scripts/test-policies.sh
+
+verify: test ## Alias for 'test' (back-compat)

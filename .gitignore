@@ -33,6 +33,8 @@ Thumbs.db
 .env
 .env.local
 config.local.env
+argocd-password.txt
+argocd-secret*
 
 # Logs
 *.log

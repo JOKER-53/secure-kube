@@ -1,9 +1,5 @@
 # SecureKube
 
-
-![CI](https://github.com/KADHIRAVANEG/secure-kube/actions/workflows/ci.yaml/badge.svg)
-
-
 A CIS-aligned, zero-trust Kubernetes cluster provisioned via IaC — no manual security configuration required, 100% local, zero cloud cost.
 
 ## Problem statement
@@ -54,7 +50,36 @@ Default Kubernetes installations ship with zero network isolation, no pod securi
 | CI validation | GitHub Actions |
 | CIS scoring | kube-bench |
 
-## Quick start
+## GitOps with Argo CD
+
+Every policy layer (NetworkPolicy, RBAC, Pod Security Standards, Gatekeeper constraints) is registered as an Argo CD `Application` pointing at this repo. Argo CD continuously watches for drift between git and the live cluster, and shows it in a UI — but **won't apply changes automatically** (manual sync mode). You approve each sync explicitly.
+
+```
+gitops/
+└── apps/
+    ├── project.yaml                  Argo CD AppProject (scoped source/destination allow-list)
+    ├── network-policies-app.yaml     watches kustomize/base/network-policies/
+    ├── rbac-app.yaml                 watches kustomize/base/rbac/
+    ├── pod-security-app.yaml         watches kustomize/base/pod-security/
+    ├── gatekeeper-templates-app.yaml watches gatekeeper/constraint-templates/
+    └── gatekeeper-constraints-app.yaml watches gatekeeper/constraints/
+```
+
+Argo CD is installed as part of `make deploy`. Once up:
+
+```bash
+make dashboard-argocd   # open UI at localhost:8080 (prints admin password)
+make sync-all           # trigger sync for every layer
+make sync-policies      # trigger sync for network policies only
+make sync-rbac          # RBAC only
+make sync-gatekeeper    # Gatekeeper templates + constraints
+make status             # shows Argo CD app health alongside everything else
+```
+
+**What GitOps gives you here:**
+- Any manual `kubectl apply` someone does outside git gets flagged as drift in the UI
+- Policy changes go through git → PR review → merge → manual sync approval, not ad-hoc shell commands
+- Full audit trail of what changed, when, and why (git history)
 
 Prerequisites: `terraform`, `kubectl`, `helm`, `kind`, `docker` (with your user in the `docker` group — see Troubleshooting if you hit permission errors).
 
@@ -119,61 +144,13 @@ securekube/
 └── docs/architecture.md             the real reasoning behind every non-obvious decision
 ```
 
-## Chart
-
-```mermaid
-flowchart TD
-    %% Styling Definitions
-    classDef infra fill:#2980b9,stroke:#fff,color:#fff;
-    classDef policy fill:#e67e22,stroke:#fff,color:#fff;
-    classDef deploy fill:#27ae60,stroke:#fff,color:#fff;
-    classDef validation fill:#8e44ad,stroke:#fff,color:#fff;
-
-    %% Orchestration
-    MK[Makefile]:::deploy
-    CI[.github/workflows/ci.yaml]:::validation
-
-    %% Layer 1: Infrastructure
-    subgraph Provisioning [Layer 1: Infrastructure & Hardening]
-        TF[terraform/kind/]:::infra
-        TF --> Audit[audit-policy.yaml]
-        TF --> KConfig[kind-config.yaml]
-    end
-
-    %% Layer 2: Security Policy
-    subgraph Enforcement [Layer 2: Policy Enforcement]
-        GK[gatekeeper/]:::policy
-        GK --> Temp[ConstraintTemplates]
-        GK --> Cons[Constraints]
-        Kus[kustomize/base/]:::policy
-        Kus --> Net[NetworkPolicies]
-        Kus --> RBAC[Least Privilege RBAC]
-        Kus --> PSA[Pod Security Admission]
-    end
-
-    %% Layer 3: Runtime & Validation
-    subgraph Validation [Layer 3: Runtime & Validation]
-        Helm[helm/]:::deploy
-        Helm --> Falco[Falco eBPF]
-        Scripts[scripts/test-policies.sh]:::validation
-        Ex[examples/]:::validation
-    end
-
-    %% Connections
-    MK -->|deploy| TF
-    TF -->|initialize| Enforcement
-    Enforcement -->|runtime| Helm
-    CI -->|validates| Scripts
-    Scripts -->|tests| Ex
-```
-
 ## Known limitations (read this before treating it as "done")
 
 - **`make bench` will not show a clean pass.** `kind` runs Kubernetes components as containers on your machine, not as a real multi-node control plane — controls around etcd file permissions, kubelet config file ownership, and certain node-level TLS settings can't be satisfied the way they would be on bare metal or a managed node group.
 - **`anonymous-auth` is intentionally left enabled** on the API server, despite CIS 1.2.1 recommending it be disabled. Disabling it breaks `kubeadm join`'s bootstrap token discovery outright (a real, reproducible failure we hit and fixed — see `docs/architecture.md`). RBAC + NodeRestriction constrain what an unauthenticated request can actually do instead.
 - **Gatekeeper's webhook is fail-open (`Ignore`), not fail-closed (`Fail`).** Fail-closed causes an unrecoverable deadlock with Calico's cluster-scoped IPAM CRDs on this stack (also a real failure we hit — full explanation in `docs/architecture.md`). This means there's a brief enforcement gap any time the webhook pod restarts.
 - **The allowed-repos list ships permissive** (`docker.io/library/`, `ghcr.io/`, `gcr.io/`, `registry.k8s.io/`) so the bundled examples work out of the box. Tighten `gatekeeper/constraints/allowed-repos-constraint.yaml` to your actual registry before treating this as a real supply-chain control.
-- **No GitOps layer.** Deploys are `helm upgrade --install` + `kubectl apply`, not reconciled by Argo CD/Flux.
+- **No GitOps for Helm releases (Gatekeeper, Falco, Argo CD itself).** Argo CD manages the policy layers (NetworkPolicy, RBAC, PSA, Gatekeeper constraints), but the Helm installs of Gatekeeper, Falco, and Argo CD are still handled imperatively by the Makefile. Adding these as Argo CD `Application` manifests (with `helm` source type) is the next step.
 
 ## Troubleshooting
 
@@ -199,8 +176,10 @@ flowchart TD
 
 ## Roadmap
 
+- [x] GitOps layer — Argo CD managing all policy layers (NetworkPolicy, RBAC, PSA, Gatekeeper constraints)
+- [ ] GitOps for Helm releases (Gatekeeper, Falco, Argo CD itself as Argo CD Applications)
 - [ ] EKS Terraform module (IAM Roles for Service Accounts, VPC CNI + NetworkPolicy)
 - [ ] GKE Terraform module (Workload Identity, GKE Sandbox / gVisor)
 - [ ] Image signing/verification via Cosign + Gatekeeper
 - [ ] Secrets management via External Secrets Operator
-- [ ] GitOps layer (Argo CD or Flux) for declarative policy management
+- [ ] Per-workload egress NetworkPolicy allow-lists

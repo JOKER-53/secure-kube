@@ -1,0 +1,63 @@
+# Argo CD AppProject — SecureKube
+# Groups all SecureKube Applications under one project with explicit
+# source repo and destination cluster/namespace allow-lists.
+# This is the Argo CD equivalent of RBAC: it constrains what the project's
+# Applications are allowed to sync from and to.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: securekube
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: "SecureKube — CIS-aligned zero-trust cluster policies"
+
+  # Only allow syncing from this specific repo.
+  # Change PLACEHOLDER to your actual GitHub repo URL.
+  sourceRepos:
+    - https://github.com/PLACEHOLDER/securekube
+
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: default
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: gatekeeper-system
+    - server: https://kubernetes.default.svc
+      namespace: falco
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+
+  # Cluster-scoped resources these apps are allowed to manage.
+  clusterResourceWhitelist:
+    - group: "templates.gatekeeper.sh"
+      kind: ConstraintTemplate
+    - group: "constraints.gatekeeper.sh"
+      kind: "*"
+    - group: "networking.k8s.io"
+      kind: NetworkPolicy
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRole
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRoleBinding
+    - group: ""
+      kind: Namespace
+
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ServiceAccount
+    - group: ""
+      kind: ConfigMap
+    - group: "rbac.authorization.k8s.io"
+      kind: Role
+    - group: "rbac.authorization.k8s.io"
+      kind: RoleBinding
+    - group: "networking.k8s.io"
+      kind: NetworkPolicy
+    - group: "policy"
+      kind: PodDisruptionBudget
+
+  # Deny syncing from any other repo or to any other cluster.
+  roles: []

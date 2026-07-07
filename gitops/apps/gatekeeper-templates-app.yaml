@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: securekube-gatekeeper-templates
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: securekube
+
+  source:
+    repoURL: https://github.com/PLACEHOLDER/securekube   # replaced by make argocd
+    targetRevision: main
+    path: gatekeeper/constraint-templates
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default   # ConstraintTemplates are cluster-scoped
+
+  syncPolicy:
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      # Gatekeeper's CRDs may take a moment to register after a Gatekeeper
+      # upgrade — retry rather than fail immediately on a CRD not found.
+      - RespectIgnoreDifferences=true
+
+  # Argo CD's health check doesn't know about Gatekeeper's custom CRDs
+  # by default; mark these resources as healthy so sync doesn't stall.
+  ignoreDifferences:
+    - group: templates.gatekeeper.sh
+      kind: ConstraintTemplate
+      jsonPointers:
+        - /status

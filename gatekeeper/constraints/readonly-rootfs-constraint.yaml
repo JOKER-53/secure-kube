@@ -7,5 +7,5 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    excludedNamespaces: ["kube-system", "gatekeeper-system", "falco"]
+    excludedNamespaces: ["kube-system", "gatekeeper-system", "falco", "calico-system", "argocd"]
   enforcementAction: deny

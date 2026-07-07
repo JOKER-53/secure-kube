@@ -1,0 +1,47 @@
+# Helm values for argo/argo-cd
+# Minimal install: single server, no Dex (SSO), no ApplicationSet controller.
+# For a local kind cluster we just need the core sync engine + UI.
+
+global:
+  # Run Argo CD itself under restrictive security context where possible.
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+server:
+  # Disable TLS termination inside Argo CD — we access it via port-forward
+  # on localhost, so there's no need for a self-signed cert in the path.
+  extraArgs:
+    - --insecure
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+repoServer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+applicationSet:
+  enabled: false   # not needed for a single-cluster monorepo setup
+
+notifications:
+  enabled: false   # no alerting integration for local lab
+
+dex:
+  enabled: false   # no SSO — use the admin password locally
+
+configs:
+  params:
+    # Manual sync only — Argo CD will show drift but not apply it automatically.
+    # You approve syncs via the UI (make dashboard-argocd) or CLI (make sync).
+    application.resourceTrackingMethod: annotation

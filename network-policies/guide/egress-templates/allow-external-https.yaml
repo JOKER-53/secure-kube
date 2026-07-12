@@ -1,0 +1,54 @@
+# Template: Allow external HTTPS egress
+#
+# Allows YOUR_APP to make outbound HTTPS (port 443) calls to any
+# external IP address. This is the broadest "safe" external egress
+# allow — it lets pods call any public API, but still blocks
+# unencrypted HTTP (port 80) and all other ports.
+#
+# For tighter control, use allow-external-cidr.yaml instead and
+# specify the exact IP ranges of your external dependencies.
+#
+# Common use cases:
+#   - Pods calling external SaaS APIs (Stripe, Twilio, SendGrid, etc.)
+#   - Pulling data from public data sources
+#   - Webhook senders
+#
+# Usage:
+#   cp allow-external-https.yaml kustomize/base/network-policies/
+#   kubectl apply -k kustomize/base/network-policies/
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-https-egress
+  # namespace: your-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: YOUR_APP   # replace with your workload's label
+  policyTypes:
+    - Egress
+  egress:
+    # Allow HTTPS to any external IP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              # Block access back into the cluster's own pod/service CIDRs
+              # to prevent pods from bypassing NetworkPolicy via IP directly.
+              # Adjust these to match your cluster's actual pod/service subnets.
+              - 10.244.0.0/16   # pod subnet (set in kind-config.yaml)
+              - 10.96.0.0/12    # service subnet (set in kind-config.yaml)
+      ports:
+        - protocol: TCP
+          port: 443
+
+    # DNS always needed
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

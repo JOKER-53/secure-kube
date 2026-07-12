@@ -1,0 +1,38 @@
+# Template: Allow same-namespace traffic (east-west)
+#
+# Allows pods with the specified label to send traffic to ANY other pod
+# in the SAME namespace, on any port. Good starting point for a namespace
+# where multiple microservices need to talk to each other freely.
+#
+# For tighter control, replace the broad `podSelector: {}` destination
+# with specific pod labels (see allow-database-egress.yaml for an example).
+#
+# Usage:
+#   cp allow-same-namespace.yaml kustomize/base/network-policies/
+#   # edit app label, then:
+#   kubectl apply -k kustomize/base/network-policies/
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace-egress
+  # namespace: your-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: YOUR_APP   # replace with your workload's label
+  policyTypes:
+    - Egress
+  egress:
+    # Allow egress to any pod in the same namespace
+    - to:
+        - podSelector: {}   # any pod in this namespace
+    # DNS is still needed even for same-namespace traffic
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

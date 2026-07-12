@@ -1,0 +1,41 @@
+# Template: Allow DNS egress
+#
+# REQUIRED for every workload. Without this, pods can't resolve any
+# service name — kubectl exec into a pod and `curl http://my-service`
+# will fail with "could not resolve host" even if all other policies
+# are correct.
+#
+# The cluster's default-deny-all policy blocks UDP 53 egress, so this
+# must be applied explicitly to every namespace that runs workloads.
+#
+# Usage:
+#   kubectl apply -f allow-dns.yaml -n <your-namespace>
+#
+# Or add to kustomize/base/network-policies/ and it applies cluster-wide
+# (already done for the `default` namespace in this repo).
+#
+# Replace `app: YOUR_APP` with your pod's label if you want to scope
+# this to a specific workload rather than the whole namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  # namespace: your-namespace   # uncomment and set your namespace
+spec:
+  podSelector:
+    matchLabels: {}   # applies to ALL pods in the namespace
+    # To scope to a specific workload:
+    # matchLabels:
+    #   app: YOUR_APP
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

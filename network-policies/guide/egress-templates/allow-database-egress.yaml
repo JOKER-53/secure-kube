@@ -1,0 +1,52 @@
+# Template: Allow database egress
+#
+# Allows YOUR_APP to connect to a specific database pod on a specific
+# port. More precise than namespace-level allows — only this app can
+# reach this database, on this port, nothing else.
+#
+# Common ports:
+#   PostgreSQL: 5432
+#   MySQL:      3306
+#   Redis:      6379
+#   MongoDB:    27017
+#   Elasticsearch: 9200
+#
+# Usage:
+#   cp allow-database-egress.yaml kustomize/base/network-policies/
+#   # Replace YOUR_APP, DB_APP_LABEL, DB_NAMESPACE, DB_PORT
+#   kubectl apply -k kustomize/base/network-policies/
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-egress
+  # namespace: your-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: YOUR_APP   # the application pod that needs DB access
+  policyTypes:
+    - Egress
+  egress:
+    # Allow egress to the database pod specifically
+    - to:
+        - podSelector:
+            matchLabels:
+              app: DB_APP_LABEL   # e.g. app: postgres
+          # If DB is in a different namespace, add namespaceSelector:
+          # namespaceSelector:
+          #   matchLabels:
+          #     kubernetes.io/metadata.name: DB_NAMESPACE
+      ports:
+        - protocol: TCP
+          port: 5432   # replace with your DB port
+
+    # DNS always needed
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

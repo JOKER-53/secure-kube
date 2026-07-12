@@ -6,7 +6,37 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [1.0.0] - 2026-07-07
+## [1.2.0] - 2026-07-12
+
+### Added
+- GitOps layer via Argo CD — 5 Applications managing all policy layers (NetworkPolicy, RBAC, PSA, Gatekeeper constraints) with manual sync mode
+- Argo CD AppProject scoping source repo and destination cluster with least-privilege allow-lists
+- `make argocd`, `make dashboard-argocd`, `make sync-all`, `make sync-policies`, `make sync-rbac`, `make sync-gatekeeper` targets
+- `scripts/install-argocd.sh` — auto-detects GitHub remote URL, patches Application manifests, prints admin credentials
+- CONTRIBUTING.md — contribution guide covering constraint authoring, test requirements, commit format, PR process
+- SECURITY.md — vulnerability reporting path and documented known trade-offs
+- GitHub issue templates — bug report and feature request
+- GitHub PR template — checklist for constraint PRs
+- Trivy vulnerability scanning in CI (filesystem scan) and release workflow (container image scan)
+- Trivy SARIF results uploaded to GitHub Security tab
+- Container image published to ghcr.io and Docker Hub on every release
+
+### Fixed
+- Added `argocd` to Gatekeeper `excludedNamespaces` on all 8 constraints — prevents webhook deadlock during Argo CD pod scheduling
+- Lowercase repo owner in Trivy image ref — GHCR requires all-lowercase image names
+- `security-events: write` permission added to release workflow for SARIF upload
+- Restored missing `test:` target in Makefile
+- `install-argocd.sh` pre-creates `argocd` namespace before Helm install to avoid Gatekeeper webhook race
+
+### Docker images
+```
+docker pull ghcr.io/kadhiravaneg/secure-kube:v1.2.0
+docker pull joker53/secure-kube:v1.2.0
+```
+
+---
+
+## [1.1.0] - 2026-07-07
 
 ### Added
 - CIS-aligned Kubernetes cluster provisioning via `kind` + Terraform

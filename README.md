@@ -4,6 +4,7 @@
 ![Release](https://github.com/KADHIRAVANEG/secure-kube/actions/workflows/release.yaml/badge.svg)
 ![GitHub release](https://img.shields.io/github/v/release/KADHIRAVANEG/secure-kube)
 ![License](https://img.shields.io/github/license/KADHIRAVANEG/secure-kube)
+![Security scan](https://img.shields.io/badge/security-trivy-blue)
 
 A CIS-aligned, zero-trust Kubernetes cluster provisioned via IaC — no manual security configuration required, 100% local, zero cloud cost.
 
@@ -89,12 +90,6 @@ gitops/
     ├── pod-security-app.yaml         watches kustomize/base/pod-security/
     ├── gatekeeper-templates-app.yaml watches gatekeeper/constraint-templates/
     └── gatekeeper-constraints-app.yaml watches gatekeeper/constraints/
-```
-## Chart 
-```
-
-
-
 ```
 
 Argo CD is installed as part of `make deploy`. Once up:

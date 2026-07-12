@@ -1,7 +1,5 @@
 name: Release
 
-# Triggers on version tags (v1.0.0, v1.2.3, etc.)
-# Also builds and pushes 'latest' on every push to main.
 on:
   push:
     tags:
@@ -9,20 +7,21 @@ on:
     branches:
       - main
 
-env:
-  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/secure-kube
-  DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/secure-kube
-
 jobs:
   # ── Job 1: Build and push container image ──────────────────────────
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write   # needed to push to ghcr.io
+      packages: write
+      security-events: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set lowercase repo owner
+        id: owner
+        run: echo "lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,16 +39,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Generate image tags:
-      # - On tag push (v1.0.0): tag as v1.0.0 AND latest
-      # - On main push: tag as main-<sha> and edge
       - name: Generate image metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.GHCR_IMAGE }}
-            ${{ env.DOCKERHUB_IMAGE }}
+            ghcr.io/${{ steps.owner.outputs.lc }}/secure-kube
+            ${{ secrets.DOCKERHUB_USERNAME }}/secure-kube
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -64,10 +60,26 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Cache layers between builds to speed up subsequent runs
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+      - name: Scan container image for vulnerabilities (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ steps.owner.outputs.lc }}/secure-kube:${{ steps.meta.outputs.version }}
+          severity: CRITICAL,HIGH
+          exit-code: 0
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+        continue-on-error: true
 
   # ── Job 2: Create GitHub Release (tag pushes only) ──────────────────
   github-release:
@@ -75,21 +87,22 @@ jobs:
     needs: build-and-push
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
-      contents: write   # needed to create releases
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history needed for changelog generation
+          fetch-depth: 0
+
+      - name: Set lowercase repo owner
+        id: owner
+        run: echo "lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Generate changelog
         id: changelog
         run: |
-          # Get the previous tag to diff against
           PREV_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]' | sed -n '2p')
           CURRENT_TAG=${GITHUB_REF_NAME}
-
-          echo "Generating changelog from ${PREV_TAG:-initial commit} to ${CURRENT_TAG}"
 
           if [ -z "${PREV_TAG}" ]; then
             COMMITS=$(git log --pretty=format:"- %s (%h)" HEAD)
@@ -97,7 +110,6 @@ jobs:
             COMMITS=$(git log --pretty=format:"- %s (%h)" "${PREV_TAG}..HEAD")
           fi
 
-          # Categorise commits by prefix
           FEATURES=$(echo "${COMMITS}" | grep -i "^- feat" || true)
           FIXES=$(echo "${COMMITS}"    | grep -i "^- fix"  || true)
           DOCS=$(echo "${COMMITS}"     | grep -i "^- docs" || true)
@@ -112,9 +124,9 @@ jobs:
             [ -n "${DOCS}" ]     && echo "### Documentation" && echo "${DOCS}"  && echo ""
             [ -n "${OTHER}" ]    && echo "### Other changes" && echo "${OTHER}"  && echo ""
             echo "---"
-            echo "**Docker image:**"
+            echo "**Docker images:**"
             echo "\`\`\`"
-            echo "docker pull ghcr.io/${{ github.repository_owner }}/secure-kube:${CURRENT_TAG}"
+            echo "docker pull ghcr.io/${{ steps.owner.outputs.lc }}/secure-kube:${CURRENT_TAG}"
             echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/secure-kube:${CURRENT_TAG}"
             echo "\`\`\`"
             echo "EOF"

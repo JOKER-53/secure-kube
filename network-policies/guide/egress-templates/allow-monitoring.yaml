@@ -1,0 +1,70 @@
+# Template: Allow monitoring egress + ingress
+#
+# Two policies needed for Prometheus scraping:
+#   1. Egress from your app to the monitoring namespace (if app pushes metrics)
+#   2. Ingress to your app FROM the monitoring namespace (if Prometheus pulls)
+#
+# Most setups use Prometheus pull model — Prometheus reaches into your
+# pod on port 8080 (or wherever /metrics is exposed). In that case,
+# you only need Policy 2.
+#
+# Usage:
+#   cp allow-monitoring.yaml kustomize/base/network-policies/
+#   kubectl apply -k kustomize/base/network-policies/
+---
+# Policy 1: Allow your app to PUSH metrics to a monitoring namespace
+# (only needed if you push to Pushgateway or a remote write endpoint)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-push-egress
+  # namespace: your-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: YOUR_APP
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring   # adjust to your monitoring namespace
+      ports:
+        - protocol: TCP
+          port: 9091   # Pushgateway default port; adjust if needed
+
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Policy 2: Allow Prometheus to PULL metrics from your app
+# (most common setup — Prometheus scrapes /metrics on your pod)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape-ingress
+  # namespace: your-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: YOUR_APP
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring   # adjust to your monitoring namespace
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus   # adjust to your Prometheus pod label
+      ports:
+        - protocol: TCP
+          port: 8080   # your app's metrics port — adjust if different

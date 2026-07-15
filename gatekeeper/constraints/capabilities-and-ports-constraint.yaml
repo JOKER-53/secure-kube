@@ -7,7 +7,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    excludedNamespaces: ["kube-system", "gatekeeper-system", "falco", "calico-system", "argocd"]
+    excludedNamespaces: ["kube-system", "gatekeeper-system", "falco", "calico-system", "argocd", "monitoring"]
   parameters:
     allowedCapabilities:
       - "NET_BIND_SERVICE"   # common legit need: bind to a low port without full root

@@ -1,0 +1,22 @@
+# ServiceMonitor — tells Prometheus to scrape Falco Sidekick's
+# /metrics endpoint. Prometheus Operator picks this up automatically
+# because kube-prometheus-stack installs it.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: falco-sidekick
+  namespace: monitoring
+  labels:
+    app: falco-sidekick
+    release: kube-prometheus-stack   # must match Prometheus operator's selector
+spec:
+  namespaceSelector:
+    matchNames:
+      - falco
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: falcosidekick
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-alerts-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"   # picked up by Grafana sidecar automatically
+data:
+  falco-alerts.json: |
+    {
+      "title": "SecureKube — Falco Security Alerts",
+      "uid": "securekube-falco",
+      "tags": ["securekube", "security", "falco"],
+      "timezone": "browser",
+      "schemaVersion": 27,
+      "version": 1,
+      "panels": [
+        {
+          "id": 1,
+          "title": "Falco Alerts by Priority (last 1h)",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "sum(increase(falcosidekick_inputs_total[1h])) by (priority)",
+              "legendFormat": "{{priority}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Falco Alert Rate (per minute)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "targets": [
+            {
+              "expr": "rate(falcosidekick_inputs_total[5m]) * 60",
+              "legendFormat": "{{priority}} - {{rule}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Critical + Emergency Alerts",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "targets": [
+            {
+              "expr": "rate(falcosidekick_inputs_total{priority=~\"critical|emergency\"}[5m]) * 60",
+              "legendFormat": "{{rule}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Top Triggered Rules (last 1h)",
+          "type": "table",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "targets": [
+            {
+              "expr": "topk(10, sum(increase(falcosidekick_inputs_total[1h])) by (rule))",
+              "legendFormat": "{{rule}}",
+              "instant": true
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Alerts by Namespace",
+          "type": "piechart",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "targets": [
+            {
+              "expr": "sum(increase(falcosidekick_inputs_total[1h])) by (namespace)",
+              "legendFormat": "{{namespace}}"
+            }
+          ]
+        }
+      ],
+      "time": {"from": "now-1h", "to": "now"},
+      "refresh": "30s"
+    }

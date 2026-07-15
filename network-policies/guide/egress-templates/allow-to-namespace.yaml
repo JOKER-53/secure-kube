@@ -1,0 +1,53 @@
+# Template: Allow egress to a specific namespace
+#
+# Allows YOUR_APP to send traffic to pods in TARGET_NAMESPACE.
+# Classic use case: frontend namespace → backend namespace,
+# or app namespace → monitoring namespace.
+#
+# Both namespaceSelector and podSelector can be combined to be even
+# more specific: "only pods labelled role=api in the backend namespace."
+#
+# Usage:
+#   cp allow-to-namespace.yaml kustomize/base/network-policies/
+#   # Replace YOUR_APP, TARGET_NAMESPACE, and optionally TARGET_PORT
+#   kubectl apply -k kustomize/base/network-policies/
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-TARGET_NAMESPACE   # rename to match your target
+  # namespace: your-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: YOUR_APP   # source workload
+  policyTypes:
+    - Egress
+  egress:
+    # Option A: allow to ALL pods in target namespace (any port)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: TARGET_NAMESPACE
+
+    # Option B (commented out): allow to specific pods on a specific port
+    # - to:
+    #     - namespaceSelector:
+    #         matchLabels:
+    #           kubernetes.io/metadata.name: TARGET_NAMESPACE
+    #       podSelector:
+    #         matchLabels:
+    #           role: api
+    #   ports:
+    #     - protocol: TCP
+    #       port: 8080
+
+    # DNS always needed
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

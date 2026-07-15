@@ -1,0 +1,58 @@
+# Template: Allow egress to a specific external CIDR
+#
+# Tighter than allow-external-https.yaml — restricts egress to a
+# specific IP range rather than the entire internet.
+#
+# Use this when you know the IP range of your external dependency:
+#   - Your company's API gateway (e.g. 203.0.113.0/24)
+#   - A cloud provider's service IP range (AWS, GCP, Azure publish these)
+#   - A partner's dedicated IP range
+#
+# NetworkPolicy cannot filter by hostname/domain — only by IP.
+# If your external service uses dynamic IPs, use allow-external-https.yaml
+# or consider an egress proxy (e.g. Squid, Envoy) that CAN filter by FQDN.
+#
+# Usage:
+#   cp allow-external-cidr.yaml kustomize/base/network-policies/
+#   # Replace YOUR_APP, TARGET_CIDR, TARGET_PORT
+#   kubectl apply -k kustomize/base/network-policies/
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-cidr-egress
+  # namespace: your-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: YOUR_APP   # replace with your workload's label
+  policyTypes:
+    - Egress
+  egress:
+    # Allow egress to a specific IP range on a specific port
+    - to:
+        - ipBlock:
+            cidr: 203.0.113.0/24   # replace with your target CIDR
+            # except:              # optionally exclude sub-ranges
+            #   - 203.0.113.5/32
+      ports:
+        - protocol: TCP
+          port: 443   # replace with your target port (443, 5432, 6379, etc.)
+
+    # Add more CIDR blocks if needed:
+    # - to:
+    #     - ipBlock:
+    #         cidr: 198.51.100.0/24
+    #   ports:
+    #     - protocol: TCP
+    #       port: 443
+
+    # DNS always needed
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

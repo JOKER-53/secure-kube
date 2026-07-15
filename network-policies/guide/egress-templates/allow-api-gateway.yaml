@@ -1,0 +1,36 @@
+# Template: Allow ingress only from API gateway
+#
+# Restricts ingress to YOUR_APP so that ONLY pods in the API gateway
+# namespace can reach it. Nothing else — not other namespaces, not
+# direct external traffic, not other pods in the same namespace.
+#
+# This is the "backend behind a gateway" pattern: your service is
+# invisible to the outside world and only accepts traffic that has
+# passed through your gateway's auth/rate-limiting/TLS termination.
+#
+# Usage:
+#   cp allow-api-gateway.yaml kustomize/base/network-policies/
+#   # Replace YOUR_APP, GATEWAY_NAMESPACE, GATEWAY_POD_LABEL, YOUR_APP_PORT
+#   kubectl apply -k kustomize/base/network-policies/
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-from-gateway
+  # namespace: your-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: YOUR_APP   # your backend service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: GATEWAY_NAMESPACE   # e.g. ingress-nginx
+          podSelector:
+            matchLabels:
+              app: GATEWAY_POD_LABEL   # e.g. app: ingress-nginx, app: kong
+      ports:
+        - protocol: TCP
+          port: 8080   # replace with your app's actual listening port

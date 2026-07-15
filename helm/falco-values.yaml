@@ -1,20 +1,26 @@
-# Helm values for falcosecurity/falco
-# NSA/CISA Hardening Guide §4 — runtime threat detection.
+# Updated Falco Helm values — wires Falco Sidekick to push alerts
+# to Prometheus Alertmanager and expose metrics for Prometheus scraping.
 driver:
-  kind: modern_ebpf   # no kernel module compilation needed, works well in kind
+  kind: modern_ebpf
 
 falcosidekick:
   enabled: true
   webui:
-    enabled: true   # simple dashboard to see alerts without a SIEM
+    enabled: true
+  config:
+    # Push Falco alerts to Prometheus Alertmanager
+    alertmanager:
+      hostport: "http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093"
+      minimumpriority: "warning"
+      checkcert: false
+    # Expose /metrics for Prometheus to scrape
+    prometheusmetrics:
+      enabled: true
+      port: 2802
 
 falco:
   jsonOutput: true
   jsonIncludeOutputProperty: true
-
-  # Rules that matter most for a "secure by default" cluster demo:
-  # shell-in-container, unexpected outbound connections, sensitive
-  # file reads (matches the audit-logging objective).
   rules_file:
     - /etc/falco/falco_rules.yaml
     - /etc/falco/falco_rules.local.yaml

@@ -1,0 +1,143 @@
+# Helm values for prometheus-community/kube-prometheus-stack
+# Tuned for kind (local) — reduced resource requests, persistence
+# disabled (no PVCs needed for a local lab), Falco alerts wired in.
+
+# ── Prometheus ────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    # Scrape interval — 30s is fine for a local lab
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    retention: 24h   # keep 24h of metrics locally
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    # Pick up any ServiceMonitor/PodMonitor in any namespace
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+    # No persistent storage for local kind cluster
+    storageSpec: {}
+
+  # Expose Prometheus for port-forward
+  service:
+    type: ClusterIP
+    port: 9090
+
+# ── Grafana ───────────────────────────────────────────────────────────
+grafana:
+  enabled: true
+
+  adminPassword: "securekube-admin"   # change before production use
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  # Pre-load SecureKube dashboards from ConfigMaps
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: monitoring
+      label: grafana_dashboard
+      labelValue: "1"
+    datasources:
+      enabled: true
+
+  # Default dashboards — keep them, they're useful
+  defaultDashboardsEnabled: true
+  defaultDashboardsTimezone: browser
+
+  grafana.ini:
+    server:
+      root_url: "http://localhost:3000"
+    security:
+      allow_embedding: true
+    auth.anonymous:
+      enabled: false
+
+# ── Alertmanager ─────────────────────────────────────────────────────
+alertmanager:
+  enabled: true
+
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+  service:
+    type: ClusterIP
+    port: 9093
+
+  # Route Falco critical alerts visibly — log to stdout for local lab.
+  # In production, replace with Slack/PagerDuty/email receivers.
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname', 'namespace']
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: 'default'
+      routes:
+        - match:
+            severity: critical
+          receiver: 'critical-alerts'
+        - match:
+            source: falco
+          receiver: 'falco-alerts'
+    receivers:
+      - name: 'default'
+        # No-op receiver for local lab — alerts visible in Alertmanager UI
+      - name: 'critical-alerts'
+        # Add Slack/email here for production
+      - name: 'falco-alerts'
+        # Add Slack/PagerDuty here for production
+
+# ── Node Exporter ─────────────────────────────────────────────────────
+nodeExporter:
+  enabled: true
+
+# ── kube-state-metrics ────────────────────────────────────────────────
+kubeStateMetrics:
+  enabled: true
+
+# ── Prometheus Operator ───────────────────────────────────────────────
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ── Component monitors (disable ones kind doesn't expose) ─────────────
+kubeEtcd:
+  enabled: false   # kind's etcd isn't exposed for scraping
+kubeControllerManager:
+  enabled: false   # same
+kubeScheduler:
+  enabled: false   # same
+kubeProxy:
+  enabled: false   # kind uses different proxy setup

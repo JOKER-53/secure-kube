@@ -1,8 +1,8 @@
 include config.env
 export
 
-.PHONY: deploy deploy-light destroy cluster policies gatekeeper falco argocd verify test bench \
-        status logs clean-logs dashboard dashboard-argocd sync-policies sync-rbac \
+.PHONY: deploy deploy-light destroy cluster policies gatekeeper falco argocd observability verify test bench \
+        status logs clean-logs dashboard dashboard-argocd dashboard-grafana dashboard-prometheus sync-policies sync-rbac \
         sync-gatekeeper sync-pod-security sync-all clean help
 
 CLUSTER_NAME  ?= securekube
@@ -13,11 +13,13 @@ export TF_VAR_cluster_name TF_VAR_enable_network_policy_cni
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
-deploy: cluster policies gatekeeper falco argocd test ## Full one-command deploy (kind, local)
+deploy: cluster policies gatekeeper falco argocd observability test ## Full one-command deploy (kind, local)
 	@echo ""
-	@echo "✅ SecureKube is up. CIS-hardened, zero-trust, policy-enforced, GitOps-managed."
-	@echo "   Run 'make bench' for the CIS score, 'make status' for component health."
-	@echo "   Run 'make dashboard-argocd' to approve pending syncs in the Argo CD UI."
+	@echo "✅ SecureKube is up. CIS-hardened, zero-trust, policy-enforced, GitOps-managed, fully observable."
+	@echo "   Run 'make dashboard-grafana'    → Grafana at localhost:3000 (admin / securekube-admin)"
+	@echo "   Run 'make dashboard-prometheus' → Prometheus at localhost:9090"
+	@echo "   Run 'make dashboard-argocd'     → Argo CD at localhost:8080"
+	@echo "   Run 'make dashboard'            → Falco Sidekick UI at localhost:2802"
 
 deploy-light: ## Deploy with Falco disabled and 1 worker — for slower machines
 	@$(MAKE) cluster
@@ -88,6 +90,32 @@ sync-gatekeeper: ## Manually trigger Argo CD sync for Gatekeeper constraints
 		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}'
 
 sync-all: sync-policies sync-rbac sync-pod-security sync-gatekeeper ## Trigger Argo CD sync for all layers
+
+observability: ## Install Prometheus + Grafana + Alertmanager + Falco alert rules
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
+	helm repo update
+	helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+		--namespace monitoring --create-namespace \
+		--wait --timeout 300s \
+		-f helm/kube-prometheus-stack-values.yaml
+	@echo "→ Prometheus + Grafana + Alertmanager installed"
+	kubectl apply -f observability/falco-servicemonitor.yaml
+	kubectl apply -f observability/dashboards/
+	kubectl apply -f observability/alerts/
+	helm upgrade --install falco falcosecurity/falco \
+		--namespace falco \
+		-f helm/falco-values.yaml
+	@echo "→ Falco wired to Alertmanager, dashboards and alert rules loaded"
+	@echo "→ Run 'make dashboard-grafana' to open Grafana (admin / securekube-admin)"
+
+dashboard-grafana: ## Port-forward Grafana to localhost:3000
+	@echo "Opening Grafana at http://localhost:3000 (Ctrl+C to stop)"
+	@echo "Username: admin  Password: securekube-admin"
+	kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+
+dashboard-prometheus: ## Port-forward Prometheus to localhost:9090
+	@echo "Opening Prometheus at http://localhost:9090 (Ctrl+C to stop)"
+	kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
 	./scripts/test-policies.sh
 
 verify: test ## Alias for 'test' (back-compat)
@@ -124,6 +152,9 @@ status: ## Show health of every SecureKube component
 	@echo "== Argo CD Applications =="
 	@kubectl get applications -n argocd 2>/dev/null || echo "  none registered"
 	@echo ""
+	@echo "== Observability =="
+	@kubectl get pods -n monitoring 2>/dev/null || echo "  not installed"
+	@echo ""
 	@echo "== Constraints (active policies) =="
 	@kubectl get constraints 2>/dev/null || echo "  none"
 	@echo ""
@@ -147,8 +178,3 @@ destroy: ## Tear down the cluster and all resources
 	@echo "→ Cluster destroyed"
 
 clean: destroy ## Alias for destroy
-
-test: ## Run negative + positive policy tests
-	./scripts/test-policies.sh
-
-verify: test ## Alias for 'test' (back-compat)

@@ -1,0 +1,61 @@
+# PrometheusRule — alerting rules based on Falco metrics.
+# These fire in Alertmanager when Falco detects suspicious activity.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: falco-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: falco.security
+      interval: 30s
+      rules:
+        # Fire if any critical/emergency Falco alert fires
+        - alert: FalcoCriticalAlert
+          expr: |
+            increase(falcosidekick_inputs_total{priority=~"critical|emergency"}[5m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+            source: falco
+          annotations:
+            summary: "Critical Falco security alert detected"
+            description: "Falco has detected a {{ $labels.priority }} event: {{ $labels.rule }} in namespace {{ $labels.namespace }}"
+
+        # Fire if shell is spawned inside a container
+        - alert: FalcoShellInContainer
+          expr: |
+            increase(falcosidekick_inputs_total{rule="Terminal shell in container"}[5m]) > 0
+          for: 0m
+          labels:
+            severity: warning
+            source: falco
+          annotations:
+            summary: "Shell spawned inside a container"
+            description: "A shell was spawned in container {{ $labels.container }} in namespace {{ $labels.namespace }}"
+
+        # Fire if Falco alert rate spikes (potential attack)
+        - alert: FalcoAlertSpike
+          expr: |
+            rate(falcosidekick_inputs_total[5m]) > 0.5
+          for: 2m
+          labels:
+            severity: warning
+            source: falco
+          annotations:
+            summary: "Falco alert rate spike detected"
+            description: "Falco is generating more than 30 alerts/minute — possible attack or misconfiguration"
+
+        # Fire if Gatekeeper is blocking lots of pods (policy misconfiguration)
+        - alert: GatekeeperHighViolations
+          expr: |
+            increase(gatekeeper_violations_total[10m]) > 10
+          for: 5m
+          labels:
+            severity: warning
+            source: gatekeeper
+          annotations:
+            summary: "High number of Gatekeeper policy violations"
+            description: "More than 10 Gatekeeper violations in the last 10 minutes — check constraints or workload configs"

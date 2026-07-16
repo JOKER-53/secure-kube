@@ -1,82 +1,519 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: falco-alerts-dashboard
+  name: securekube-security-dashboard
   namespace: monitoring
   labels:
-    grafana_dashboard: "1"   # picked up by Grafana sidecar automatically
+    grafana_dashboard: "1"
 data:
-  falco-alerts.json: |
+  securekube-security.json: |
     {
-      "title": "SecureKube — Falco Security Alerts",
-      "uid": "securekube-falco",
-      "tags": ["securekube", "security", "falco"],
+      "title": "SecureKube \u2014 Security Overview",
+      "uid": "securekube-security",
+      "tags": [
+        "securekube",
+        "security",
+        "falco",
+        "gatekeeper"
+      ],
       "timezone": "browser",
-      "schemaVersion": 27,
-      "version": 1,
+      "schemaVersion": 36,
+      "version": 2,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
       "panels": [
         {
           "id": 1,
-          "title": "Falco Alerts by Priority (last 1h)",
+          "title": "\ud83d\udea8 Critical Alerts (last 1h)",
           "type": "stat",
-          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 0,
+            "y": 0
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "CLEAN",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            }
+          },
           "targets": [
             {
-              "expr": "sum(increase(falcosidekick_inputs_total[1h])) by (priority)",
-              "legendFormat": "{{priority}}"
+              "expr": "sum(increase(falcosidekick_inputs_total{priority=~\"critical|emergency\"}[1h])) or vector(0)",
+              "legendFormat": "Critical"
             }
-          ]
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "orientation": "auto",
+            "textMode": "auto",
+            "colorMode": "background"
+          }
         },
         {
           "id": 2,
-          "title": "Falco Alert Rate (per minute)",
-          "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "title": "\u26a0\ufe0f Warning Alerts (last 1h)",
+          "type": "stat",
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 4,
+            "y": 0
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "orange",
+                    "value": 10
+                  }
+                ]
+              }
+            }
+          },
           "targets": [
             {
-              "expr": "rate(falcosidekick_inputs_total[5m]) * 60",
-              "legendFormat": "{{priority}} - {{rule}}"
+              "expr": "sum(increase(falcosidekick_inputs_total{priority=\"warning\"}[1h])) or vector(0)",
+              "legendFormat": "Warning"
             }
-          ]
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
         },
         {
           "id": 3,
-          "title": "Critical + Emergency Alerts",
-          "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "title": "\ud83d\udccb Total Alerts (last 1h)",
+          "type": "stat",
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 8,
+            "y": 0
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "blue",
+                "mode": "fixed"
+              }
+            }
+          },
           "targets": [
             {
-              "expr": "rate(falcosidekick_inputs_total{priority=~\"critical|emergency\"}[5m]) * 60",
-              "legendFormat": "{{rule}}"
+              "expr": "sum(increase(falcosidekick_inputs_total[1h])) or vector(0)",
+              "legendFormat": "Total"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 4,
+          "title": "\ud83d\udee1\ufe0f Gatekeeper Policy Violations (last 1h)",
+          "type": "stat",
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 12,
+            "y": 0
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(gatekeeper_violations_total[1h])) or vector(0)",
+              "legendFormat": "Violations"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 5,
+          "title": "\ud83d\udd12 Cluster Security Status",
+          "type": "stat",
+          "gridPos": {
+            "h": 4,
+            "w": 8,
+            "x": 16,
+            "y": 0
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "1": {
+                      "text": "\u2705 SECURE",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "targets": [
+            {
+              "expr": "vector(1)",
+              "legendFormat": "Status"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "textMode": "value"
+          }
+        },
+        {
+          "id": 6,
+          "title": "Falco Alert Rate (per minute) \u2014 last 1h",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 4
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "rate(falcosidekick_inputs_total{priority=\"critical\"}[5m]) * 60",
+              "legendFormat": "\ud83d\udd34 Critical"
+            },
+            {
+              "expr": "rate(falcosidekick_inputs_total{priority=\"warning\"}[5m]) * 60",
+              "legendFormat": "\ud83d\udfe1 Warning"
+            },
+            {
+              "expr": "rate(falcosidekick_inputs_total{priority=\"notice\"}[5m]) * 60",
+              "legendFormat": "\ud83d\udd35 Notice"
             }
           ]
         },
         {
-          "id": 4,
-          "title": "Top Triggered Rules (last 1h)",
-          "type": "table",
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "id": 7,
+          "title": "Top Triggered Falco Rules (last 1h)",
+          "type": "barchart",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 4
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              }
+            }
+          },
           "targets": [
             {
               "expr": "topk(10, sum(increase(falcosidekick_inputs_total[1h])) by (rule))",
               "legendFormat": "{{rule}}",
               "instant": true
             }
-          ]
+          ],
+          "options": {
+            "xTickLabelRotation": -45
+          }
         },
         {
-          "id": 5,
+          "id": 8,
           "title": "Alerts by Namespace",
           "type": "piechart",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 12
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              }
+            }
+          },
           "targets": [
             {
               "expr": "sum(increase(falcosidekick_inputs_total[1h])) by (namespace)",
-              "legendFormat": "{{namespace}}"
+              "legendFormat": "{{namespace}}",
+              "instant": true
             }
-          ]
+          ],
+          "options": {
+            "pieType": "donut",
+            "displayLabels": [
+              "name",
+              "percent"
+            ]
+          }
+        },
+        {
+          "id": 9,
+          "title": "Alerts by Priority Breakdown",
+          "type": "piechart",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 12
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "fixed"
+              },
+              "mappings": []
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "critical"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "warning"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "orange",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "notice"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "blue",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(falcosidekick_inputs_total[1h])) by (priority)",
+              "legendFormat": "{{priority}}",
+              "instant": true
+            }
+          ],
+          "options": {
+            "pieType": "donut",
+            "displayLabels": [
+              "name",
+              "percent"
+            ]
+          }
+        },
+        {
+          "id": 10,
+          "title": "Recent Falco Events (live table)",
+          "type": "table",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 12
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "priority"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 80
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "rule"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 200
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "expr": "sort_desc(sum(increase(falcosidekick_inputs_total[1h])) by (rule, priority, namespace))",
+              "legendFormat": "",
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "options": {
+            "sortBy": [
+              {
+                "displayName": "Value",
+                "desc": true
+              }
+            ]
+          }
         }
-      ],
-      "time": {"from": "now-1h", "to": "now"},
-      "refresh": "30s"
+      ]
     }

@@ -204,7 +204,7 @@ securekube/
 ## Roadmap
 
 - [x] GitOps layer — Argo CD managing all policy layers (NetworkPolicy, RBAC, PSA, Gatekeeper constraints)
-- [ ] GitOps for Helm releases (Gatekeeper, Falco, Argo CD itself as Argo CD Applications)
+- [x] GitOps for Helm releases (Gatekeeper, Falco, Argo CD itself as Argo CD Applications)
 - [ ] EKS Terraform module (IAM Roles for Service Accounts, VPC CNI + NetworkPolicy)
 - [ ] GKE Terraform module (Workload Identity, GKE Sandbox / gVisor)
 - [ ] Image signing/verification via Cosign + Gatekeeper

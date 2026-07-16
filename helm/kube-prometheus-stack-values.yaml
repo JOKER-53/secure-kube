@@ -141,3 +141,7 @@ kubeScheduler:
   enabled: false   # same
 kubeProxy:
   enabled: false   # kind uses different proxy setup
+
+grafana:
+  image:
+    tag: "11.4.0"

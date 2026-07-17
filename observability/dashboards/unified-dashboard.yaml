@@ -1,0 +1,1197 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: securekube-unified-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  securekube-unified.json: |
+    {
+      "title": "SecureKube \u2014 Unified Security & Cluster Overview",
+      "uid": "securekube-unified",
+      "tags": [
+        "securekube",
+        "security",
+        "falco",
+        "gatekeeper",
+        "kubernetes"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "name": "Falco Critical Events",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "enable": true,
+            "expr": "changes(falcosidekick_inputs_total{priority=~'critical|emergency'}[1m]) > 0",
+            "iconColor": "red",
+            "step": "60s",
+            "titleFormat": "\ud83d\udea8 Critical Falco Alert"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "row",
+          "title": "\ud83d\udda5\ufe0f Cluster Health",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "collapsed": false
+        },
+        {
+          "id": 2,
+          "title": "Nodes Ready",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 3,
+            "x": 0,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count(kube_node_status_condition{condition='Ready',status='true'})",
+              "legendFormat": "Nodes"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 3,
+          "title": "Running Pods",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 3,
+            "x": 3,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "blue",
+                "mode": "fixed"
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase='Running'})",
+              "legendFormat": "Pods"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 4,
+          "title": "Running Containers",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 3,
+            "x": 6,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "purple",
+                "mode": "fixed"
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_status_running)",
+              "legendFormat": "Containers"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 5,
+          "title": "Pending Pods",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 3,
+            "x": 9,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase='Pending'}) or vector(0)",
+              "legendFormat": "Pending"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 6,
+          "title": "Failed Pods",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 3,
+            "x": 12,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase='Failed'}) or vector(0)",
+              "legendFormat": "Failed"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 7,
+          "title": "CPU Usage (all nodes)",
+          "type": "gauge",
+          "gridPos": {
+            "h": 3,
+            "w": 3,
+            "x": 15,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 70
+                  },
+                  {
+                    "color": "red",
+                    "value": 90
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "100 - (avg(rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)",
+              "legendFormat": "CPU%"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          }
+        },
+        {
+          "id": 8,
+          "title": "Memory Usage (all nodes)",
+          "type": "gauge",
+          "gridPos": {
+            "h": 3,
+            "w": 3,
+            "x": 18,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 70
+                  },
+                  {
+                    "color": "red",
+                    "value": 90
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
+              "legendFormat": "Mem%"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          }
+        },
+        {
+          "id": 9,
+          "title": "Cluster Security Status",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 3,
+            "x": 21,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "1": {
+                      "text": "\u2705 SECURE",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "targets": [
+            {
+              "expr": "vector(1)",
+              "legendFormat": "Status"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "textMode": "value"
+          }
+        },
+        {
+          "id": 10,
+          "title": "CPU Usage per Node",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 4
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "100 - (rate(node_cpu_seconds_total{mode='idle'}[5m]) * 100)",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "title": "Memory Usage per Node",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 4
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "row",
+          "title": "\ud83d\udea8 Security \u2014 Falco Runtime Alerts",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 10
+          },
+          "collapsed": false
+        },
+        {
+          "id": 13,
+          "title": "\ud83d\udd34 Critical Alerts (1h)",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 4,
+            "x": 0,
+            "y": 11
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "CLEAN",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(falcosidekick_inputs_total{priority=~'critical|emergency'}[1h])) or vector(0)",
+              "legendFormat": "Critical"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 14,
+          "title": "\ud83d\udfe1 Warning Alerts (1h)",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 4,
+            "x": 4,
+            "y": 11
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "orange",
+                    "value": 10
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(falcosidekick_inputs_total{priority='warning'}[1h])) or vector(0)",
+              "legendFormat": "Warning"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 15,
+          "title": "\ud83d\udccb Total Alerts (1h)",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 4,
+            "x": 8,
+            "y": 11
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "blue",
+                "mode": "fixed"
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(falcosidekick_inputs_total[1h])) or vector(0)",
+              "legendFormat": "Total"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 16,
+          "title": "\ud83d\udee1\ufe0f Gatekeeper Violations (1h)",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 4,
+            "x": 12,
+            "y": 11
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(gatekeeper_violations_total[1h])) or vector(0)",
+              "legendFormat": "Violations"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 17,
+          "title": "Alert Trend",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 4,
+            "x": 16,
+            "y": 11
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.1
+                  }
+                ]
+              },
+              "unit": "ops"
+            }
+          },
+          "targets": [
+            {
+              "expr": "rate(falcosidekick_inputs_total[5m]) or vector(0)",
+              "legendFormat": "Rate/s"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "graphMode": "area"
+          }
+        },
+        {
+          "id": 18,
+          "title": "Active Rules Firing",
+          "type": "stat",
+          "gridPos": {
+            "h": 3,
+            "w": 4,
+            "x": 20,
+            "y": 11
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "orange",
+                "mode": "fixed"
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count(sum(increase(falcosidekick_inputs_total[1h])) by (rule) > 0) or vector(0)",
+              "legendFormat": "Rules"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 19,
+          "title": "Falco Alert Rate (per minute)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 14,
+            "x": 0,
+            "y": 14
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "\ud83d\udd34 Critical"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "\ud83d\udfe1 Warning"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "orange",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "\ud83d\udd35 Notice"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "blue",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "expr": "rate(falcosidekick_inputs_total{priority='critical'}[5m]) * 60",
+              "legendFormat": "\ud83d\udd34 Critical"
+            },
+            {
+              "expr": "rate(falcosidekick_inputs_total{priority='warning'}[5m]) * 60",
+              "legendFormat": "\ud83d\udfe1 Warning"
+            },
+            {
+              "expr": "rate(falcosidekick_inputs_total{priority='notice'}[5m]) * 60",
+              "legendFormat": "\ud83d\udd35 Notice"
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "title": "Alerts by Priority",
+          "type": "piechart",
+          "gridPos": {
+            "h": 7,
+            "w": 5,
+            "x": 14,
+            "y": 14
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(falcosidekick_inputs_total[1h])) by (priority)",
+              "legendFormat": "{{priority}}",
+              "instant": true
+            }
+          ],
+          "options": {
+            "pieType": "donut",
+            "displayLabels": [
+              "name",
+              "percent"
+            ]
+          }
+        },
+        {
+          "id": 21,
+          "title": "Alerts by Namespace",
+          "type": "piechart",
+          "gridPos": {
+            "h": 7,
+            "w": 5,
+            "x": 19,
+            "y": 14
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(falcosidekick_inputs_total[1h])) by (namespace)",
+              "legendFormat": "{{namespace}}",
+              "instant": true
+            }
+          ],
+          "options": {
+            "pieType": "donut",
+            "displayLabels": [
+              "name",
+              "percent"
+            ]
+          }
+        },
+        {
+          "id": 22,
+          "title": "Top Triggered Rules (last 1h)",
+          "type": "barchart",
+          "gridPos": {
+            "h": 7,
+            "w": 14,
+            "x": 0,
+            "y": 21
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "topk(10, sum(increase(falcosidekick_inputs_total[1h])) by (rule))",
+              "legendFormat": "{{rule}}",
+              "instant": true
+            }
+          ],
+          "options": {
+            "xTickLabelRotation": -30,
+            "barWidth": 0.6
+          }
+        },
+        {
+          "id": 23,
+          "title": "Recent Security Events",
+          "type": "table",
+          "gridPos": {
+            "h": 7,
+            "w": 10,
+            "x": 14,
+            "y": 21
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "priority"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 90
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Value"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 70
+                  },
+                  {
+                    "id": "displayName",
+                    "value": "Count"
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "expr": "sort_desc(sum(increase(falcosidekick_inputs_total[1h])) by (rule, priority))",
+              "legendFormat": "",
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "options": {
+            "sortBy": [
+              {
+                "displayName": "Count",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": 24,
+          "type": "row",
+          "title": "\ud83d\udd12 Policy Enforcement & Network",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "collapsed": false
+        },
+        {
+          "id": 25,
+          "title": "NetworkPolicy Count",
+          "type": "stat",
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 0,
+            "y": 29
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "green",
+                "mode": "fixed"
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count(kube_networkpolicy_created) or vector(0)",
+              "legendFormat": "Policies"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 26,
+          "title": "Namespaces with Policies",
+          "type": "stat",
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 4,
+            "y": 29
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "teal",
+                "mode": "fixed"
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count(count(kube_networkpolicy_created) by (namespace)) or vector(0)",
+              "legendFormat": "Namespaces"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 27,
+          "title": "Pod Restarts (1h)",
+          "type": "stat",
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 8,
+            "y": 29
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(kube_pod_container_status_restarts_total[1h])) or vector(0)",
+              "legendFormat": "Restarts"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 28,
+          "title": "Pods Not Running",
+          "type": "stat",
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 12,
+            "y": 29
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 3
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase!='Running',phase!='Succeeded'}) or vector(0)",
+              "legendFormat": "Not Running"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background"
+          }
+        },
+        {
+          "id": 29,
+          "title": "Container Restart Rate",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 4,
+            "w": 8,
+            "x": 16,
+            "y": 29
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "rate(kube_pod_container_status_restarts_total[5m]) * 60",
+              "legendFormat": "{{namespace}}/{{pod}}"
+            }
+          ]
+        }
+      ]
+    }

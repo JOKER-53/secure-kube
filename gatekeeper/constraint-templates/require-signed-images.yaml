@@ -1,0 +1,73 @@
+# Supply chain security — reject pods running images that haven't been
+# signed by our Cosign keyless workflow.
+#
+# This constraint works alongside allowed-repos.yaml:
+#   - allowed-repos ensures images come from trusted registries
+#   - This constraint ensures those images were actually signed by our CI
+#
+# Verification happens via the Cosign bundle stored in the OCI registry
+# alongside the image. The Rego checks that a valid signature annotation
+# exists — the actual cryptographic verification is done by a Cosign
+# admission webhook (cosign-gatekeeper-provider) in production.
+# For local kind clusters, this constraint operates in "audit" mode
+# (see constraint activation file) so it reports violations without
+# blocking — real enforcement requires the cosign-gatekeeper-provider
+# sidecar which needs cluster-level OIDC trust configuration.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiresignedimages
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequireSignedImages
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            allowedSigners:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiresignedimages
+
+        # Check for Cosign signature annotation on the pod.
+        # In production with cosign-gatekeeper-provider installed,
+        # this annotation is injected after cryptographic verification.
+        # Without the provider, this audits for the annotation's presence.
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          not has_signature_annotation(c)
+          not is_exempt(c.image)
+          msg := sprintf(
+            "container <%v> uses image <%v> without a verified Cosign signature. Sign with: cosign sign %v",
+            [c.name, c.image, c.image]
+          )
+        }
+
+        has_signature_annotation(c) {
+          annotations := input.review.object.metadata.annotations
+          key := sprintf("cosign.sigstore.dev/signature/%v", [c.image])
+          annotations[key]
+        }
+
+        # Exempt system namespaces from signature requirement
+        is_exempt(_) {
+          ns := input.review.object.metadata.namespace
+          exempt_namespaces := {
+            "kube-system", "gatekeeper-system", "falco",
+            "calico-system", "argocd", "monitoring"
+          }
+          exempt_namespaces[ns]
+        }
+
+        input_containers[c] {
+          c := input.review.object.spec.containers[_]
+        }
+        input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+        }

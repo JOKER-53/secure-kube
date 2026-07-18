@@ -1,0 +1,33 @@
+# Activate the K8sRequireSignedImages constraint.
+#
+# enforcementAction: warn (not deny) for kind/local clusters:
+#   - "deny" requires the cosign-gatekeeper-provider webhook to be
+#     installed and configured with cluster OIDC trust, which adds
+#     significant complexity to a local kind setup
+#   - "warn" audits violations and surfaces them in Gatekeeper's audit
+#     log and Grafana dashboard without blocking pod creation
+#   - Change to "deny" when deploying to EKS/GKE with the full
+#     cosign-gatekeeper-provider setup
+#
+# For production enforcement see:
+# https://docs.sigstore.dev/policy-controller/overview/
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequireSignedImages
+metadata:
+  name: require-signed-images
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    excludedNamespaces:
+      - kube-system
+      - gatekeeper-system
+      - falco
+      - calico-system
+      - argocd
+      - monitoring
+  parameters:
+    allowedSigners:
+      - "https://github.com/KADHIRAVANEG/secure-kube/.github/workflows/release.yaml@refs/heads/main"
+  enforcementAction: warn   # change to "deny" with cosign-gatekeeper-provider installed

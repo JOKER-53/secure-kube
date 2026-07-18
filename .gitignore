@@ -40,4 +40,6 @@ argocd-secret*
 securekube-v*.zip
 dist/
 cosign.key
+!cosign.pub
+!cosign.pub
 cosign.pub

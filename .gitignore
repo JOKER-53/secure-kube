@@ -39,3 +39,5 @@ argocd-secret*
 # Release artifacts
 securekube-v*.zip
 dist/
+cosign.key
+cosign.pub

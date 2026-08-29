@@ -3,7 +3,7 @@ export
 
 .PHONY: deploy deploy-light destroy cluster policies gatekeeper falco argocd observability verify test bench \
         status logs clean-logs dashboard dashboard-argocd dashboard-grafana dashboard-prometheus sync-policies sync-rbac \
-        sync-gatekeeper sync-pod-security sync-all clean help
+        sync-gatekeeper sync-pod-security sync-helm-apps sync-all clean help
 
 CLUSTER_NAME  ?= securekube
 TF_VAR_cluster_name         = $(strip $(CLUSTER_NAME))
@@ -89,7 +89,15 @@ sync-gatekeeper: ## Manually trigger Argo CD sync for Gatekeeper constraints
 	kubectl -n argocd patch application securekube-gatekeeper-constraints \
 		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}'
 
-sync-all: sync-policies sync-rbac sync-pod-security sync-gatekeeper ## Trigger Argo CD sync for all layers
+sync-helm-apps: ## Manually trigger Argo CD sync for Gatekeeper, Falco, and Argo CD Helm apps
+	kubectl -n argocd patch application securekube-gatekeeper \
+		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}' || true
+	kubectl -n argocd patch application securekube-falco \
+		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}' || true
+	kubectl -n argocd patch application securekube-argocd \
+		--type merge -p '{"operation":{"initiatedBy":{"username":"makefile"},"sync":{"revision":"HEAD"}}}' || true
+
+sync-all: sync-policies sync-rbac sync-pod-security sync-gatekeeper sync-helm-apps ## Trigger Argo CD sync for all layers
 
 observability: ## Install Prometheus + Grafana + Alertmanager + Falco alert rules
 	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update

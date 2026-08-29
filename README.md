@@ -177,7 +177,6 @@ securekube/
 - **`anonymous-auth` is intentionally left enabled** on the API server, despite CIS 1.2.1 recommending it be disabled. Disabling it breaks `kubeadm join`'s bootstrap token discovery outright (a real, reproducible failure we hit and fixed — see `docs/architecture.md`). RBAC + NodeRestriction constrain what an unauthenticated request can actually do instead.
 - **Gatekeeper's webhook is fail-open (`Ignore`), not fail-closed (`Fail`).** Fail-closed causes an unrecoverable deadlock with Calico's cluster-scoped IPAM CRDs on this stack (also a real failure we hit — full explanation in `docs/architecture.md`). This means there's a brief enforcement gap any time the webhook pod restarts.
 - **The allowed-repos list ships permissive** (`docker.io/library/`, `ghcr.io/`, `gcr.io/`, `registry.k8s.io/`) so the bundled examples work out of the box. Tighten `gatekeeper/constraints/allowed-repos-constraint.yaml` to your actual registry before treating this as a real supply-chain control.
-- **No GitOps for Helm releases (Gatekeeper, Falco, Argo CD itself).** Argo CD manages the policy layers (NetworkPolicy, RBAC, PSA, Gatekeeper constraints), but the Helm installs of Gatekeeper, Falco, and Argo CD are still handled imperatively by the Makefile. Adding these as Argo CD `Application` manifests (with `helm` source type) is the next step.
 
 ## Troubleshooting
 
@@ -209,4 +208,4 @@ securekube/
 - [ ] GKE Terraform module (Workload Identity, GKE Sandbox / gVisor)
 - [ ] Image signing/verification via Cosign + Gatekeeper
 - [ ] Secrets management via External Secrets Operator
-- [ ] Per-workload egress NetworkPolicy allow-lists
+- [x] Per-workload egress NetworkPolicy allow-lists

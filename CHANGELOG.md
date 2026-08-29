@@ -141,5 +141,5 @@ docker pull joker53/secure-kube:v1.2.0
 - [ ] GKE Terraform module
 - [ ] Image signing with Cosign + Gatekeeper
 - [ ] Secrets management (External Secrets Operator)
-- [ ] Per-workload egress NetworkPolicy
-- [ ] GitOps for Helm releases (Gatekeeper, Falco, Argo CD as Argo CD Applications)
+- [x] Per-workload egress NetworkPolicy
+- [x] GitOps for Helm releases (Gatekeeper, Falco, Argo CD as Argo CD Applications)

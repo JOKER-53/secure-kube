@@ -11,7 +11,7 @@
 #     -v /var/run/docker.sock:/var/run/docker.sock \
 #     -v $(pwd):/workspace \
 #     -w /workspace \
-#     ghcr.io/kadhiravaneg/secure-kube:latest \
+#     ghcr.io/joker-53/secure-kube:latest \
 #     make deploy
 
 # ── Stage 1: download all tool binaries ──────────────────────────────
@@ -81,5 +81,5 @@ CMD ["make", "help"]
 
 LABEL org.opencontainers.image.title="SecureKube" \
       org.opencontainers.image.description="CIS-aligned zero-trust Kubernetes cluster via IaC" \
-      org.opencontainers.image.source="https://github.com/KADHIRAVANEG/secure-kube" \
+      org.opencontainers.image.source="https://github.com/JOKER-53/secure-kube" \
       org.opencontainers.image.licenses="MIT"

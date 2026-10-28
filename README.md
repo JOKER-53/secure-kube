@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/github/license/KADHIRAVANEG/secure-kube)
 ![Security scan](https://img.shields.io/badge/security-trivy-blue)
 
-A CIS-aligned, zero-trust Kubernetes cluster provisioned via IaC — no manual security configuration required, 100% local, zero cloud cost.
+A CIS-aligned, zero-trust Kubernetes cluster provisioned via IaC - no manual security configuration required, 100% local, zero cloud cost.
 
 ## Container image
 
